@@ -322,7 +322,7 @@ function fitFov() {
 // the wall behind the desk is at y = 1.8 m in Blender, i.e. z = -1.8 here
 audio.attach(scene, center(named.Speaker_L), center(named.Speaker_R), center(named.Tower),
   { wallZ: -1.8, deskY: DESK_TOP });
-if (named.Clock_Frame || named.Art) audio.addClock(scene, new THREE.Vector3(-1.22, 1.40, -1.79));   // the clock on the wall (Blender -1.22, 1.79, 1.40)
+if (named.Clock_Frame || named.Art) audio.addClock(scene, new THREE.Vector3(-0.33, 1.75, -1.79));   // the clock above the Messi poster (Blender -0.33, 1.79, 1.75)
 if (named.Fan_Blades) {
   audio.addPedestalFan(scene, named.Fan_Blades.getWorldPosition(new THREE.Vector3()));
   if (fanHead) fanHead.attach(audio.pedestal);   // the whoosh turns with the head
