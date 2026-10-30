@@ -4,6 +4,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomAudio } from './audio.js';
 
 // Blender's "AgX - Punchy" look: three's AgX plus the same look step Blender applies
@@ -33,7 +38,9 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 const tier = new URLSearchParams(location.search).get('q') || (coarse ? 'lo' : 'hi');
 
 // ------------------------------------------------------------------ renderer
-const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
+// with post-processing on, antialiasing happens in its own buffer; the canvas's would be wasted
+const usePost = new URLSearchParams(location.search).get('post') !== '0';
+const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: !usePost, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.AgXToneMapping;          // same view transform as the Blender scene
@@ -1216,9 +1223,100 @@ const dust = (() => {
   return { update(t) { mat.uniforms.time.value = t; } };
 })();
 
+// ------------------------------------------------------------------ the lens: post-processing
+// The scene is drawn into a half-float buffer (4x MSAA), still scene-linear, and only then
+// tone-mapped. That's what lets the brightest things (the lamp's bulb, the LEDs, highlights)
+// bloom like they do through a real lens, instead of clipping flat at white:
+//   bloom   - a soft halo from what's far brighter than its surroundings
+//   focus   - depth of field once you lean in (the screen, the knobs, the DVD tray), off at the seat
+//   finish  - AgX (with the mood look), a faint vignette, and fine film grain, which also
+//             dithers away the banding 8 bits leave in a dark room's gradients
+// ?post=0 draws straight to the screen as before; ?bloom= / ?grain= / ?vignette= tune it.
+const post = !usePost ? null : (() => {
+  const num = (k, d) => (params.has(k) ? +params.get(k) : d);
+  const size = () => new THREE.Vector2(innerWidth, innerHeight);
+  const target = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType,
+    // on high-density screens the pixels are small enough that 2 samples do; 4 cost ~5 ms more there
+    samples: num('msaa', renderer.getPixelRatio() >= 1.5 ? 2 : 4) });
+  const composer = new EffectComposer(renderer, target);
+  composer.addPass(new RenderPass(scene, camera));
+
+  // strength, radius, threshold (scene-linear, before exposure)
+  const bloom = new UnrealBloomPass(size(), num('bloom', 0.3), num('bloomradius', 0.55), num('threshold', 0.55));
+  composer.addPass(bloom);
+
+  const bokeh = new BokehPass(scene, camera, { focus: 1, aperture: 0, maxblur: 0.008 });
+  bokeh.enabled = false;
+  composer.addPass(bokeh);
+
+  const finish = new ShaderPass({
+    defines: punchy ? { AGX_PUNCHY: 1 } : { AGX_MOOD: 1 },
+    uniforms: {
+      tDiffuse: { value: null },
+      toneMappingExposure: { value: renderer.toneMappingExposure },
+      res: { value: size() },
+      seed: { value: 0 },
+      vignette: { value: num('vignette', 0.22) },
+      grain: { value: num('grain', 0.035) },
+    },
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */`
+      // AgXToneMapping and sRGBTransferOETF come with three's prefix for every ShaderMaterial
+      uniform sampler2D tDiffuse;
+      uniform vec2 res;
+      uniform float seed, vignette, grain;
+      varying vec2 vUv;
+      float hash(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+      void main() {
+        vec3 c = AgXToneMapping(texture2D(tDiffuse, vUv).rgb);      // exposure is applied in here
+        vec2 d = (vUv - 0.5) * vec2(res.x / res.y, 1.0);
+        c *= 1.0 - vignette * smoothstep(0.25, 0.95, length(d));    // falls off toward the corners
+        c = sRGBTransferOETF(vec4(c, 1.0)).rgb;
+        // grain: triangular noise, fresh every frame, a little stronger in the shadows and mids
+        vec2 px = vUv * res + seed * vec2(113.7, 71.3);
+        float n = hash(px) + hash(px + 17.0) - 1.0;
+        c += n * grain * (1.0 - 0.7 * c);
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  });
+  composer.addPass(finish);
+
+  // what's in focus depends on where you are; the blur eases in once you've arrived
+  let aperture = 0;
+  const at = new THREE.Vector3();
+  function focusOn() {
+    if (mode === 'zoomed') return at.copy(sCenter);
+    if (mode === 'knobs' && knobs[KNOB_VOL]) return knobs[KNOB_VOL].mesh.getWorldPosition(at);
+    if (mode === 'drive' && drive) return at.copy(drive.faceCentre);
+    return null;
+  }
+  return {
+    setSize() {
+      composer.setPixelRatio(renderer.getPixelRatio());
+      composer.setSize(innerWidth, innerHeight);
+      finish.uniforms.res.value.set(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+    },
+    render(dt) {
+      const f = focusOn();
+      aperture += ((f ? num('dof', 0.012) : 0) - aperture) * (1 - Math.exp(-dt * 2.5));
+      bokeh.enabled = aperture > 1e-4;
+      if (bokeh.enabled) {
+        if (f) bokeh.uniforms.focus.value = camera.position.distanceTo(f);
+        bokeh.uniforms.aperture.value = aperture;
+      }
+      finish.uniforms.toneMappingExposure.value = renderer.toneMappingExposure;
+      finish.uniforms.seed.value = Math.random() * 100;
+      composer.render(dt);
+    },
+  };
+})();
+
 // ------------------------------------------------------------------ resize + loop
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
+  post?.setSize();
   cssRenderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   fitFov();
@@ -1229,6 +1327,15 @@ function resize() {
 }
 addEventListener('resize', resize);
 resize();
+// for checking from the console: average ms per frame, each frame waited on (readPixels)
+window.__bench = (n = 40) => {
+  const gl = renderer.getContext(), px = new Uint8Array(4);
+  const draw = () => { if (post) post.render(1 / 60); else renderer.render(scene, camera); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); };
+  for (let i = 0; i < 5; i++) draw();
+  const t0 = performance.now();
+  for (let i = 0; i < n; i++) draw();
+  return +((performance.now() - t0) / n).toFixed(2);
+};
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
@@ -1257,7 +1364,7 @@ renderer.setAnimationLoop(() => {
   updatePowerKnob(dt);
   updateDial();
   dust.update(clock.elapsedTime);
-  renderer.render(scene, camera);
+  if (post) post.render(dt); else renderer.render(scene, camera);
   cssRenderer.render(cssScene, camera);
 });
 
