@@ -70,6 +70,9 @@ export class RoomAudio {
     this.listener = new THREE.AudioListener();
     camera.add(this.listener);
     this.ctx = this.listener.context;
+    // silent until the room fades in (see setMuted): everything starting at once at full
+    // volume, the moment the scene loads, landed as a thump
+    this.listener.gain.gain.value = 0;
     this.reverb = this.ctx.createConvolver();
     this.reverb.buffer = roomIR(this.ctx);
     this.wet = this.ctx.createGain(); this.wet.gain.value = 0.16;
@@ -282,10 +285,11 @@ export class RoomAudio {
   }
 
   // the mute button: fades the whole room in or out, so nothing pops
-  setMuted(muted) {
+  // `secs` is how long the fade takes; the first one, as the room comes up, is slow
+  setMuted(muted, secs = 0.15) {
     const g = this.listener.gain.gain, t = this.ctx.currentTime;
     g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
-    g.linearRampToValueAtTime(muted ? 0 : 1, t + 0.15);
+    g.linearRampToValueAtTime(muted ? 0 : 1, t + secs);
   }
 
   toggleFan() {
