@@ -32,3 +32,4 @@ npx wrangler@4.150.0 deploy
 - Pedestal fan: "Electric Fan" by Lillya on Sketchfab, CC BY 4.0 (rebranded texture).
 - Picture-frame wood: "Hanging Picture Frame 03" by James Ray Cock, Poly Haven, CC0.
 - Windows XP recreation, apps and assets: from personal-site-v2.
+- DVD drive sounds (Freesound, CC0): "compCDandDVD_OpenClose.wav" (sound 146958) for the tray opening and closing, "Disc drive reading" (sound 556490) for the spin-up.

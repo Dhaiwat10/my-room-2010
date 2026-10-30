@@ -725,7 +725,7 @@ const drive = (() => {
   return { tray, bed, disc, parts, hit, faceCentre: face.getCenter(new THREE.Vector3()),
     discY: disc.position.y, open: 0, state: 'closed', has: 'cricket07', lift: 0, liftTarget: 0, wait: 0 };
 })();
-if (drive) { audio.driveAt = drive.faceCentre.clone(); named.Drive = drive.hit; pickables.push(drive.hit, drive.disc, drive.bed); }
+if (drive) { audio.driveAt = drive.faceCentre.clone(); audio.preloadDrive(); named.Drive = drive.hit; pickables.push(drive.hit, drive.disc, drive.bed); }
 window.__drive = () => drive && { state: drive.state, has: drive.has, open: drive.open };   // for checking from the console
 const tellPc = () => iframe.contentWindow?.postMessage({ type: 'disc', disc: drive?.state === 'closed' ? drive.has : null }, '*');
 const shelf = document.createElement('div');
@@ -745,7 +745,7 @@ shelf.addEventListener('click', (e) => {
   drive.disc.material.map = labelFor(drive.has);
   drive.lift = 1; drive.liftTarget = 0;           // it drops into the tray
   drive.disc.visible = true;
-  audio.drive('clunk');
+  audio.knobClick(0.5);                           // the disc settling into the well
   updateShelf();
   setHud('Tap the drive to close it');
 });
@@ -758,12 +758,12 @@ function driveTap(name) {
     return;
   }
   if (drive.state === 'closed') {
-    drive.state = 'opening'; drive.wait = 0.35;   // the button, then the mechanism lets go
-    audio.drive('button');
+    drive.state = 'opening'; drive.wait = 0.15;   // the latch lets go, then the motor pushes it out
+    audio.drive('open');
     tellPc();                                      // XP loses the disc the moment you eject
   } else if (drive.state === 'open') {
-    drive.state = 'closing'; drive.wait = 0.1;
-    audio.drive('button');
+    drive.state = 'closing'; drive.wait = 0.05;
+    audio.drive('close');
     setHud('');
   }
 }
@@ -771,16 +771,16 @@ function updateDrive(dt) {
   if (!drive) return;
   if (drive.wait > 0) {
     drive.wait -= dt;
-    if (drive.wait <= 0) audio.drive('motor');
   } else if (drive.state === 'opening' || drive.state === 'closing') {
     const dir = drive.state === 'opening' ? 1 : -1;
-    drive.open = THREE.MathUtils.clamp(drive.open + dir * dt / 0.95, 0, 1);
+    // timed to the recordings: ~1.25 s of motor out, ~1.3 s back in
+    drive.open = THREE.MathUtils.clamp(drive.open + dir * dt / (dir > 0 ? 1.25 : 1.3), 0, 1);
     if (drive.open === 1 && dir > 0) {
-      drive.state = 'open'; audio.drive('clunk');
+      drive.state = 'open';
       if (mode === 'drive') setHud(drive.has ? 'Tap the disc to take it out · tap the drive to close' : 'Pick a disc to put in');
     }
     if (drive.open === 0 && dir < 0) {
-      drive.state = 'closed'; audio.drive('clunk');
+      drive.state = 'closed';
       if (drive.has) {
         audio.drive('spin'); tellPc();
         // sit back up to the monitor to watch it start, as the disc spins up

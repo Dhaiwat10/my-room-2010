@@ -241,56 +241,36 @@ export class RoomAudio {
     s.connect(g); g.connect(this.knobIn); s.start();
   }
 
-  // The DVD writer, from the front of the tower: the eject button's click, the tray motor's
-  // whirr, the latch clunking home, and a disc spinning up with the laser sled ticking about.
-  // All synthesised; each call schedules one sound starting now.
+  // The DVD writer, from the front of the tower. Real recordings (Freesound, CC0): a desktop
+  // Optiarc DVD-RW's tray opening (latch clunk, motor, stop) and closing (motor, clunk), and
+  // a drive spinning up and seeking as it reads a disc. Each call plays one, starting now.
   drive(kind) {
     if (!this.driveAt || this.ctx.state !== 'running') return;
-    const ctx = this.ctx, t = ctx.currentTime;
     if (!this.driveSrc) {
       this.driveSrc = this.positional(this.scene, this.driveAt, 1, 0.3);
-      this.driveIn = ctx.createGain(); this.driveSrc.setNodeSource(this.driveIn);
+      this.driveIn = this.ctx.createGain(); this.driveSrc.setNodeSource(this.driveIn);
       this.driveIn.connect(this.reverb);
-      const SR = ctx.sampleRate, len = SR * 2;
-      this.driveNoise = ctx.createBuffer(1, len, SR);
-      const d = this.driveNoise.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     }
-    const env = (g, pts) => { g.gain.setValueAtTime(0, t); for (const [dt, v] of pts) g.gain.linearRampToValueAtTime(v, t + dt); return g; };
-    const noise = (dur, type, freq, q, pts) => {
-      const s = ctx.createBufferSource(); s.buffer = this.driveNoise; s.loop = true;
-      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
-      const g = env(ctx.createGain(), pts);
-      s.connect(f); f.connect(g); g.connect(this.driveIn); s.start(t, Math.random()); s.stop(t + dur);
-      return f;
+    this.driveBufs ??= {};
+    const GAIN = { open: 0.9, close: 0.9, spin: 0.55 };
+    const play = (buf) => {
+      const s = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      s.buffer = buf; g.gain.value = GAIN[kind];
+      s.connect(g); g.connect(this.driveIn); s.start();
     };
-    const tone = (dur, wave, f0, f1, pts, at = 0) => {
-      const o = ctx.createOscillator(); o.type = wave;
-      o.frequency.setValueAtTime(f0, t + at); o.frequency.exponentialRampToValueAtTime(f1, t + at + dur);
-      const g = env(ctx.createGain(), pts);
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
-      o.connect(lp); lp.connect(g); g.connect(this.driveIn); o.start(t + at); o.stop(t + at + dur + 0.05);
-    };
-    if (kind === 'button') {
-      noise(0.03, 'bandpass', 3200, 1.2, [[0.001, 0.35], [0.025, 0]]);
-    } else if (kind === 'motor') {            // ~1 s of the tray sliding: a geared whine on a rattle
-      tone(1.0, 'sawtooth', 150, 175, [[0.06, 0.05], [0.85, 0.045], [1.0, 0]]);
-      noise(1.0, 'bandpass', 1400, 2.5, [[0.06, 0.08], [0.85, 0.07], [1.0, 0]]);
-    } else if (kind === 'clunk') {            // the tray bottoming out against its stop
-      tone(0.12, 'sine', 110, 55, [[0.004, 0.22], [0.12, 0]]);
-      noise(0.05, 'bandpass', 2000, 1, [[0.002, 0.18], [0.05, 0]]);
-    } else if (kind === 'spin') {             // spin-up whine, then a quiet hum as it reads
-      tone(1.6, 'triangle', 70, 260, [[0.3, 0.06], [1.6, 0.05]]);
-      tone(2.6, 'triangle', 260, 240, [[0.05, 0.05], [2.6, 0]], 1.6);
-      const f = noise(4.2, 'bandpass', 600, 1.5, [[0.4, 0.05], [1.6, 0.07], [4.2, 0]]);
-      f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(1800, t + 1.6);
-      for (let i = 0; i < 7; i++) {           // the laser sled seeking
-        const at = 1.2 + Math.random() * 2.6;
-        const g = ctx.createGain(), s = ctx.createBufferSource(); s.buffer = this.driveNoise;
-        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600 + Math.random() * 1500; bp.Q.value = 3;
-        g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(0.12, t + at + 0.002); g.gain.linearRampToValueAtTime(0, t + at + 0.018);
-        s.connect(bp); bp.connect(g); g.connect(this.driveIn); s.start(t + at, Math.random()); s.stop(t + at + 0.03);
-      }
+    const have = this.driveBufs[kind];
+    if (have instanceof AudioBuffer) return play(have);
+    (this.driveBufs[kind] ??= fetch(`assets/sfx/drive_${kind}.mp3`).then((r) => r.arrayBuffer())
+      .then((a) => this.ctx.decodeAudioData(a)).then((buf) => (this.driveBufs[kind] = buf)))
+      .then(play, () => {});
+  }
+
+  // fetch the drive's sounds ahead of time, so the first eject isn't late
+  preloadDrive() {
+    this.driveBufs ??= {};
+    for (const k of ['open', 'close', 'spin']) {
+      this.driveBufs[k] ??= fetch(`assets/sfx/drive_${k}.mp3`).then((r) => r.arrayBuffer())
+        .then((a) => this.ctx.decodeAudioData(a)).then((buf) => (this.driveBufs[k] = buf));
     }
   }
 
