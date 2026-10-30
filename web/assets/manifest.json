@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.7283985614776611,
+   "lightScale": 0.7276090979576111,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.01816302351653576
+   "screenScale": 0.018155040219426155
   },
   "desk": {
    "albedo": {
@@ -25,12 +25,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 2.7660701274871826,
+   "lightScale": 2.7507474422454834,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.22803032398223877,
+   "screenScale": 0.2297619879245758,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -46,12 +46,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.3110413551330566,
+   "lightScale": 2.2021446228027344,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.4414873123168945,
+   "screenScale": 4.468258857727051,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -67,12 +67,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.024013742804527283,
+   "lightScale": 0.023516502231359482,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005769028794020414
+   "screenScale": 0.005768697243183851
   },
   "art": {
    "albedo": {
@@ -83,12 +83,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5689874291419983,
+   "lightScale": 0.5685796141624451,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.006478758063167334
+   "screenScale": 0.006469553802162409
   }
  },
  "objects": {
@@ -97,7 +97,6 @@
   "Fan_Blades": "desk",
   "Fan_Head": "desk",
   "Tower": "pc",
-  "Modem": "pc",
   "G_pc": "pc",
   "Monitor": "pc",
   "Keyboard": "pc",
@@ -106,6 +105,12 @@
   "Speaker_L_Knob_Power": "pc",
   "Speaker_L_Knob_Volume": "pc",
   "Mouse": "pc",
+  "Modem": "pc",
+  "Modem_LED_0": "pc",
+  "Modem_LED_1": "pc",
+  "Modem_LED_2": "pc",
+  "Modem_LED_3": "pc",
+  "Modem_LED_4": "pc",
   "G_far": "far",
   "Clock_Hand_Hour": "art",
   "Clock_Hand_Minute": "art",

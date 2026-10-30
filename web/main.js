@@ -240,6 +240,58 @@ function runClock(onTick) {
   if (s !== lastSecond) { if (lastSecond >= 0) onTick(); lastSecond = s; }
 }
 
+// ------------------------------------------------------------------ the BSNL modem
+// A ZTE ZXDSL 831AII. Power and DSL sit solid green (DSL blinks for a few seconds while it
+// trains, like it did every time the line came back); Internet and Ethernet flicker with
+// traffic: quick bursts while something's loading, the odd lone blip when idle, and busier
+// while you're sat up at the PC. USB was never plugged in, so it stays dark.
+const modemLeds = (() => {
+  const meshes = [0, 1, 2, 3, 4].map((i) => named[`Modem_LED_${i}`]);
+  if (!meshes[0]) return null;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(150,255,150,0.9)'); grd.addColorStop(0.22, 'rgba(50,255,80,0.3)'); grd.addColorStop(1, 'rgba(0,255,40,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  return meshes.map((mesh) => {
+    if (!mesh) return null;
+    mesh.material = new THREE.MeshBasicMaterial({ color: 0x0b1a0e, toneMapped: false });
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending,
+      depthWrite: false, transparent: true, toneMapped: false, opacity: 0 }));
+    glow.position.copy(new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3())).add(new THREE.Vector3(0, 0, 0.0015));
+    glow.scale.setScalar(0.016); scene.add(glow);
+    return { mesh, glow, on: false };
+  });
+})();
+window.__modem = () => modemLeds?.map((l) => l?.on);   // for checking from the console
+const LED_ON = new THREE.Color(0x3dff5a), LED_OFF = new THREE.Color(0x0b1a0e);
+// traffic, one stream per LED: idle blips, then a burst of fast toggling now and then
+const traffic = [2, 3].map(() => ({ burstUntil: 0, nextBurst: 1 + Math.random() * 3, nextFlip: 0, on: true }));
+function runModem(t) {
+  if (!modemLeds) return;
+  const busy = mode === 'zoomed' ? 2.2 : 1;
+  const states = [true, t < 7 ? Math.floor(t * 2.5) % 2 === 0 : true, true, true, false];
+  traffic.forEach((s, k) => {
+    if (t > s.nextBurst) {                       // a page, a song, Windows Update...
+      s.burstUntil = t + 0.25 + Math.random() * (Math.random() < 0.2 ? 3 : 0.9);
+      s.nextBurst = s.burstUntil + (0.4 + Math.random() * 4) / busy;
+    }
+    if (t > s.nextFlip) {
+      const inBurst = t < s.burstUntil;
+      s.on = inBurst ? !s.on : true;
+      s.nextFlip = t + (inBurst ? 0.025 + Math.random() * 0.07 : 0.05);
+    }
+    // Internet only shows once the line has trained
+    states[k + 2] = t < 7 && k === 0 ? false : s.on;
+  });
+  modemLeds.forEach((led, i) => {
+    if (!led || led.on === states[i]) return;
+    led.on = states[i];
+    led.mesh.material.color.copy(led.on ? LED_ON : LED_OFF);
+    led.glow.material.opacity = led.on ? 0.7 : 0;
+  });
+}
+
 // ------------------------------------------------------------------ the monitor's screen
 // The running PC (web/pc, built from pc/) sits on the screen itself, in a CSS 3D layer laid
 // exactly over the panel: whatever it's doing (BIOS, boot, windows, Winamp) is what you see,
@@ -825,6 +877,7 @@ renderer.setAnimationLoop(() => {
   screenTint.value.lerp(tintTarget, 1 - Math.exp(-dt * 4));
   runFan(clock.elapsedTime);
   runClock(() => audio.tick());
+  runModem(clock.elapsedTime);
   updateHints(clock.elapsedTime, dt);
   updatePowerKnob(dt);
   updateDial();
