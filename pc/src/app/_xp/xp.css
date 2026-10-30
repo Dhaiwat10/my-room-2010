@@ -699,7 +699,7 @@
 .xp-dialog { justify-content: space-between; padding: 12px 10px 10px; }
 .xp-dialog-body { display: flex; align-items: center; gap: 14px; }
 .xp-dialog-body svg { flex: none; }
-.xp-dialog-body p { margin: 0; line-height: 1.4; }
+.xp-dialog-body p { margin: 0; line-height: 1.4; white-space: pre-line; }
 .xp-dialog-buttons { display: flex; justify-content: center; }
 
 /* Shortcut arrow over a desktop icon */
