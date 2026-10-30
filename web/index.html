@@ -67,6 +67,13 @@
   #back { position: fixed; top: 50%; transform: translateY(-50%); left: max(8px, env(safe-area-inset-left));
     background: var(--panel); color: var(--ink); border: 0; border-radius: 999px; padding: 10px 12px;
     font: inherit; font-size: 13px; cursor: pointer; display: none; z-index: 5; }
+  /* the volume knob's level, drawn faintly around it while you turn it */
+  #dial { position: fixed; pointer-events: none; opacity: 0; transition: opacity .35s; z-index: 4; }
+  #dial svg { width: 100%; height: 100%; overflow: visible; }
+  #dial path { fill: none; stroke-linecap: round; }
+  #dial .track { stroke: rgba(255, 235, 200, 0.18); stroke-width: 2.2; }
+  #dial .level { stroke: rgba(255, 214, 150, 0.75); stroke-width: 2.6; }
+  #dial .tip { fill: rgba(255, 230, 190, 0.95); }
   #tip { position: fixed; pointer-events: none; background: var(--panel); padding: 4px 9px; border-radius: 6px;
     font-size: 12px; display: none; transform: translate(12px, 12px); }
   #rotate { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; background: var(--panel);
@@ -92,7 +99,7 @@
   <div class="lcd lcd-grid"></div>
 </div>
 <button id="back" aria-label="Back to the room">← Back</button>
-<div id="hud">Tap the monitor to use the PC · tap a speaker for music</div>
+<div id="hud">Tap the monitor to use the PC</div>
 <div id="tip"></div>
 <div id="rotate">Turn your phone sideways for the best view</div>
 

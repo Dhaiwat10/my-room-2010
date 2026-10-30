@@ -219,7 +219,8 @@ export class RoomAudio {
     o.frequency.setValueAtTime(70, t + 0.03); o.frequency.exponentialRampToValueAtTime(30, t + 0.2);
     g.gain.setValueAtTime(0, t + 0.03); g.gain.linearRampToValueAtTime(on ? 0.05 : 0.025, t + 0.045);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-    o.connect(g); g.connect(this.split, 0, 0); g.connect(this.split, 0, 1);   // through both speakers
+    const both = this.ctx.createChannelMerger(2);   // through both speakers
+    o.connect(g); g.connect(both, 0, 0); g.connect(both, 0, 1); both.connect(this.split);
     o.start(t + 0.03); o.stop(t + 0.3);
   }
 

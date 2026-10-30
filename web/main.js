@@ -350,21 +350,21 @@ if (named.Fan_Blades) {
 }
 
 // ------------------------------------------------------------------ interaction
+// ------------------------------------------------------------------ what you can touch
+// Only real things are interactive: the monitor (and the keyboard and mouse in front of it)
+// sit you up to the PC; the speaker's two knobs bring you in close to use them by hand.
 const actions = {
   Screen: ['zoom', 'ViewSonic VA2216w: sit up and use it'],
   Monitor: ['zoom', 'ViewSonic VA2216w: sit up and use it'],
   Keyboard: ['zoom', 'Logitech keyboard'],
   Mouse: ['zoom', 'Logitech mouse'],
-  Speaker_L: ['music', 'Speakers: play / pause Winamp'],
-  Speaker_R: ['music', 'Speakers: play / pause Winamp'],
-  Speaker_L_Knob_Volume: ['volume', 'Volume: drag to turn'],
-  Speaker_L_Knob_Power: ['power', 'Speakers: on / off'],
-  Tower: ['fan', 'The PC: listen to the fan'],
-  Modem: ['none', 'BSNL broadband modem'],
-  Spindle: ['none', 'Blank CD-Rs'],
+  Speaker_L_Knob_Volume: ['knob', 'Volume'],
+  Speaker_L_Knob_Power: ['knob', 'Power'],
 };
+const KNOB_VOL = 'Speaker_L_Knob_Volume', KNOB_PWR = 'Speaker_L_Knob_Power';
+const isKnob = (n) => n === KNOB_VOL || n === KNOB_PWR;
 // the knobs are about 1.5 cm across: give each an invisible, finger-sized hit area
-for (const n of ['Speaker_L_Knob_Volume', 'Speaker_L_Knob_Power']) {
+for (const n of [KNOB_VOL, KNOB_PWR]) {
   const k = named[n]; if (!k) continue;
   const hit = new THREE.Mesh(new THREE.SphereGeometry(0.011, 12, 8), new THREE.MeshBasicMaterial({ visible: false }));
   hit.name = n; scene.add(hit);
@@ -381,82 +381,241 @@ function pick(x, y) {
   return hit ? hit.object.name : null;
 }
 
-// you're sitting at the desk: the view stays put, you just point at things
-let mode = 'seated';   // seated | moving | zoomed
-const el = renderer.domElement;
-const isKnob = (n) => n === 'Speaker_L_Knob_Volume' || n === 'Speaker_L_Knob_Power';
-el.addEventListener('pointermove', (e) => {
-  if (e.pointerType !== 'mouse' || knobDrag) return;
-  if (mode !== 'seated' && mode !== 'zoomed') return;
-  let name = pick(e.clientX, e.clientY);
-  if (mode === 'zoomed' && !isKnob(name)) name = null;     // sat up to the PC, only the knobs are in reach
-  el.style.cursor = name ? 'pointer' : 'default';
-  const tip = $('tip');
-  tip.style.display = name ? 'block' : 'none';
-  if (name) { tip.textContent = actions[name][1]; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
-});
+// ------------------------------------------------------------------ the subtle hint
+// Interactive things answer a hover with a soft warm halo around their outline, and every so
+// often all of them breathe once, faintly, so phones (no hover) still find them.
+// The halo is the object's own shape drawn a touch larger, back faces only, added on top.
+const hulls = {};          // action key -> [{ hull, src, scale, centre }]
+const hullMat = () => new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.82, 0.55), transparent: true, opacity: 0,
+  side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+function addHull(key, src, scale) {
+  if (!src) return;
+  src.geometry.computeBoundingBox();
+  const centre = src.geometry.boundingBox.getCenter(new THREE.Vector3());
+  const hull = new THREE.Mesh(src.geometry, hullMat());
+  hull.matrixAutoUpdate = false; hull.renderOrder = 5;
+  scene.add(hull);
+  (hulls[key] ??= []).push({ hull, src, scale, centre });
+}
+addHull('pc', named.Monitor, 1.012);
+addHull('kb', named.Keyboard, 1.03);
+addHull('mouse', named.Mouse, 1.08);
+// the knobs get a clean soft ring in the panel's plane instead (a hull around a short
+// cylinder is half hidden by the panel and the knob itself)
+const ringTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'), grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grd.addColorStop(0.00, 'rgba(255,214,160,0)');
+  grd.addColorStop(0.58, 'rgba(255,214,160,0)');
+  grd.addColorStop(0.70, 'rgba(255,220,170,0.55)');
+  grd.addColorStop(0.76, 'rgba(255,226,180,1)');
+  grd.addColorStop(0.84, 'rgba(255,214,160,0.35)');
+  grd.addColorStop(1.00, 'rgba(255,214,160,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+  return new THREE.CanvasTexture(c);
+})();
+function addRing(key, knob) {
+  if (!knob) return;
+  const size = new THREE.Box3().setFromObject(knob).getSize(new THREE.Vector3());
+  const r = Math.max(size.x, size.y, size.z) / 2;
+  const ring = new THREE.Mesh(new THREE.PlaneGeometry(r * 3.0, r * 3.0), new THREE.MeshBasicMaterial({ map: ringTex,
+    transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+  ring.renderOrder = 6; scene.add(ring);
+  (hulls[key] ??= []).push({ ring, src: knob });
+}
+addRing(KNOB_VOL, named[KNOB_VOL]);
+addRing(KNOB_PWR, named[KNOB_PWR]);
+const hullKey = (name) => ({ Screen: 'pc', Monitor: 'pc', Keyboard: 'kb', Mouse: 'mouse' })[name] ?? name;
+const hullT = new THREE.Matrix4(), hullS = new THREE.Matrix4(), hullB = new THREE.Matrix4();
+let hovered = null, hintStart = 3, hintNext = 3;
+function updateHints(t, dt) {
+  if (t > hintNext) { hintStart = t; hintNext = t + 22; }
+  const pulse = Math.max(0, Math.sin(Math.min((t - hintStart) / 1.8, 1) * Math.PI)) * 0.2;
+  const inReach = mode === 'knobs' ? [KNOB_VOL, KNOB_PWR] : mode === 'seated' ? Object.keys(hulls) : mode === 'zoomed' ? [KNOB_VOL, KNOB_PWR] : [];
+  for (const [key, list] of Object.entries(hulls)) {
+    const live = inReach.includes(key);
+    const target = !live ? 0 : (hovered && hullKey(hovered) === key ? 0.42 : pulse);
+    for (const h of list) {
+      if (h.ring) {
+        const want = target * 1.2;                 // rings are thinner than hulls: a bit stronger
+        h.ring.material.opacity += (want - h.ring.material.opacity) * (1 - Math.exp(-dt * 10));
+        h.ring.visible = h.ring.material.opacity > 0.003;
+        if (!h.ring.visible) continue;
+        const k = knobs[key];
+        // flat against the panel, around the knob's base, facing out
+        h.ring.position.copy(k.basePos).addScaledVector(k.out, 0.0004);
+        h.ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), k.out);
+        continue;
+      }
+      h.hull.material.opacity += (target - h.hull.material.opacity) * (1 - Math.exp(-dt * 10));
+      h.hull.visible = h.hull.material.opacity > 0.003;
+      if (!h.hull.visible) continue;
+      h.src.updateWorldMatrix(true, false);
+      hullT.makeTranslation(h.centre.x, h.centre.y, h.centre.z);
+      hullS.makeScale(h.scale, h.scale, h.scale);
+      hullB.makeTranslation(-h.centre.x, -h.centre.y, -h.centre.z);
+      h.hull.matrix.copy(h.src.matrixWorld).multiply(hullT).multiply(hullS).multiply(hullB);
+    }
+  }
+}
+
 // ------------------------------------------------------------------ the speaker's knobs
-// Volume: drag up or right to turn it clockwise (louder), down or left to turn it back; about
-// 270 degrees of travel, stopped at both ends like the real pot. Power: a click turns it a
-// notch and switches the speakers on or off.
+// Power: a push button. Pressed in (flush with the panel) is on, with the LED lit; press it
+// again and it springs out, the LED goes dark. Volume: a pot with ~270 degrees of travel,
+// turned by rolling your finger or mouse around it, or with the scroll wheel.
 const knobs = {};
-for (const n of ['Speaker_L_Knob_Volume', 'Speaker_L_Knob_Power']) if (named[n]) knobs[n] = { mesh: named[n], base: named[n].quaternion.clone() };
-const KNOB_AXIS = new THREE.Vector3(0, 1, 0);   // the knob's shaft: Blender local z is glTF local y
+for (const n of [KNOB_VOL, KNOB_PWR]) if (named[n]) {
+  const mesh = named[n];
+  knobs[n] = { mesh, base: mesh.quaternion.clone(), basePos: mesh.position.clone(),
+    out: new THREE.Vector3(0, 1, 0).applyQuaternion(mesh.quaternion) };   // the shaft: Blender local z is glTF local y, pointing out of the panel
+}
+const KNOB_AXIS = new THREE.Vector3(0, 1, 0);
 const VOL_TRAVEL = THREE.MathUtils.degToRad(270);
 const knobQ = new THREE.Quaternion();
 function setKnob(name, angle) {
   const k = knobs[name]; if (!k) return;
-  // clockwise as you face it is negative about the shaft pointing at you
-  knobQ.setFromAxisAngle(KNOB_AXIS, -angle);
+  knobQ.setFromAxisAngle(KNOB_AXIS, -angle);        // clockwise as you face it
   k.mesh.quaternion.copy(k.base).multiply(knobQ);
 }
 let volume = 0.7, powered = true, lastNotch = -1;
 const volAngle = (v) => (v - 0.5) * VOL_TRAVEL;
-setKnob('Speaker_L_Knob_Volume', volAngle(volume));
-setKnob('Speaker_L_Knob_Power', THREE.MathUtils.degToRad(30));
-let knobDrag = null;
-window.__knobs = () => ({ volume, powered });   // for checking from the console
+setKnob(KNOB_VOL, volAngle(volume));
+window.__knobs = () => ({ volume, powered, mode });   // for checking from the console
+
+// the power LED: a small green dot above the button, with a soft glow when it's on
+const PUSH = 0.0035;                               // how far the button stands out when off
+let push = 0;                                      // 0 = pressed in, 1 = out
+const led = (() => {
+  const k = knobs[KNOB_PWR]; if (!k) return null;
+  const at = new THREE.Box3().setFromObject(k.mesh).getCenter(new THREE.Vector3())
+    .add(new THREE.Vector3(0, 0.0105, 0)).addScaledVector(k.out, -0.0035);   // just above the button, below the logo
+  const look = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), k.out);
+  const dot = new THREE.Mesh(new THREE.CircleGeometry(0.0016, 16), new THREE.MeshBasicMaterial({ color: 0x2bff4a, toneMapped: false }));
+  dot.position.copy(at); dot.quaternion.copy(look); scene.add(dot);
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(120,255,140,0.9)'); grd.addColorStop(0.25, 'rgba(40,255,80,0.35)'); grd.addColorStop(1, 'rgba(0,255,40,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending,
+    depthWrite: false, transparent: true, toneMapped: false }));
+  glow.position.copy(at).addScaledVector(k.out, 0.001); glow.scale.setScalar(0.014); scene.add(glow);
+  return { dot, glow };
+})();
+function updatePowerKnob(dt) {
+  push += ((powered ? 0 : 1) - push) * (1 - Math.exp(-dt * 28));   // springs out, presses in
+  const k = knobs[KNOB_PWR];
+  if (k) k.mesh.position.copy(k.basePos).addScaledVector(k.out, push * PUSH);
+  if (led) {
+    led.dot.material.color.set(powered ? 0x2bff4a : 0x0c160e);
+    led.glow.material.opacity = powered ? 0.85 : 0;
+  }
+}
+function togglePower() {
+  powered = !powered;
+  audio.setPower(powered);
+}
+function turnVolume(delta) {
+  const v = THREE.MathUtils.clamp(volume + delta, 0, 1);
+  if (v === volume) return;
+  volume = v;
+  setKnob(KNOB_VOL, volAngle(volume));
+  audio.setVolume(volume);
+  const notch = Math.round(volume * 24);           // the pot's faint detents
+  if (notch !== lastNotch) { if (lastNotch >= 0) audio.knobClick(0.22); lastNotch = notch; }
+  showDial();
+}
+
+// a faint arc around the volume knob while you're turning it, showing where it is
+const dial = document.createElement('div');
+dial.id = 'dial';
+dial.innerHTML = '<svg viewBox="-50 -50 100 100"><path class="track"/><path class="level"/><circle class="tip" r="2.6"/></svg>';
+document.body.appendChild(dial);
+const arc = (a0, a1, r) => {
+  const p = (a) => [Math.sin(a) * r, -Math.cos(a) * r];
+  const [x0, y0] = p(a0), [x1, y1] = p(a1);
+  return `M ${x0} ${y0} A ${r} ${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${x1} ${y1}`;
+};
+dial.querySelector('.track').setAttribute('d', arc(-VOL_TRAVEL / 2, VOL_TRAVEL / 2, 40));
+let dialUntil = 0;
+function showDial() { dialUntil = performance.now() + 1400; }
+const projV = new THREE.Vector3();
+function knobScreen(name) {
+  const k = knobs[name]; if (!k) return null;
+  projV.copy(new THREE.Box3().setFromObject(k.mesh).getCenter(new THREE.Vector3())).project(camera);
+  return { x: (projV.x + 1) / 2 * innerWidth, y: (1 - projV.y) / 2 * innerHeight };
+}
+function updateDial() {
+  const on = mode === 'knobs' && (performance.now() < dialUntil || rotary);
+  dial.style.opacity = on ? 1 : 0;
+  if (mode !== 'knobs') return;
+  const s = knobScreen(KNOB_VOL); if (!s) return;
+  const size = Math.min(innerWidth, innerHeight) * 0.34;
+  Object.assign(dial.style, { left: `${s.x - size / 2}px`, top: `${s.y - size / 2}px`, width: `${size}px`, height: `${size}px` });
+  const a = volAngle(volume);
+  dial.querySelector('.level').setAttribute('d', arc(-VOL_TRAVEL / 2, a, 40));
+  const tip = dial.querySelector('.tip');
+  tip.setAttribute('cx', Math.sin(a) * 40); tip.setAttribute('cy', -Math.cos(a) * 40);
+}
+
+// ------------------------------------------------------------------ pointer
+let mode = 'seated';   // seated | moving | zoomed | knobs
+const el = renderer.domElement;
+const reachable = (name) => name && (mode === 'seated' || (isKnob(name) && (mode === 'zoomed' || mode === 'knobs')));
+let rotary = null, pressMoved = 0, pressAt = null;
+const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 el.addEventListener('pointerdown', (e) => {
-  knobDrag = null;                                  // a new press always starts fresh
-  if ((mode !== 'seated' && mode !== 'zoomed') || pick(e.clientX, e.clientY) !== 'Speaker_L_Knob_Volume') return;
-  knobDrag = { x: e.clientX, y: e.clientY, v: volume, moved: 0 };
+  pressMoved = 0; pressAt = { x: e.clientX, y: e.clientY };
+  if (mode !== 'knobs') return;
+  const s = knobScreen(KNOB_VOL); if (!s) return;
+  const name = pick(e.clientX, e.clientY);
+  // up close, a roll anywhere around the volume knob turns it (the power button just takes taps)
+  const near = Math.hypot(e.clientX - s.x, e.clientY - s.y) < Math.min(innerWidth, innerHeight) * 0.3;
+  if (name === KNOB_PWR || !near) return;
+  rotary = { cx: s.x, cy: s.y, a: Math.atan2(e.clientY - s.y, e.clientX - s.x) };
   el.setPointerCapture(e.pointerId);
+  showDial();
 });
 el.addEventListener('pointermove', (e) => {
-  if (!knobDrag) return;
-  const dx = e.clientX - knobDrag.x, dy = knobDrag.y - e.clientY;
-  knobDrag.moved = Math.max(knobDrag.moved, Math.abs(dx) + Math.abs(dy));
-  volume = THREE.MathUtils.clamp(knobDrag.v + (dx + dy) / 220, 0, 1);
-  setKnob('Speaker_L_Knob_Volume', volAngle(volume));
-  audio.setVolume(volume);
-  const notch = Math.round(volume * 20);         // the pot's faint detents
-  if (notch !== lastNotch) { if (lastNotch >= 0) audio.knobClick(0.25); lastNotch = notch; }
-});
-el.addEventListener('pointerup', () => { if (knobDrag) setTimeout(() => { knobDrag = null; }, 0); });
-
-el.addEventListener('click', (e) => {
-  if (mode !== 'seated' && mode !== 'zoomed') return;
-  if (knobDrag && knobDrag.moved > 3) return;    // that was a turn, not a click
+  if (pressAt) pressMoved = Math.max(pressMoved, Math.hypot(e.clientX - pressAt.x, e.clientY - pressAt.y));
+  if (rotary) {
+    const a = Math.atan2(e.clientY - rotary.cy, e.clientX - rotary.cx);
+    // screen angles grow clockwise (y points down): clockwise is louder, like the real knob
+    turnVolume(wrap(a - rotary.a) / VOL_TRAVEL);
+    rotary.a = a;
+    return;
+  }
+  if (e.pointerType !== 'mouse') return;
   const name = pick(e.clientX, e.clientY);
-  if (!name || (mode === 'zoomed' && !isKnob(name))) return;
+  hovered = reachable(name) ? name : null;
+  el.style.cursor = hovered ? (mode === 'knobs' && hovered === KNOB_VOL ? 'grab' : 'pointer') : (mode === 'knobs' ? 'grab' : 'default');
+  const tip = $('tip');
+  tip.style.display = hovered && mode !== 'knobs' ? 'block' : 'none';
+  if (hovered) { tip.textContent = actions[hovered][1]; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
+});
+el.addEventListener('pointerup', () => { rotary = null; pressAt = null; });
+el.addEventListener('pointerleave', () => { if (!rotary) hovered = null; });
+el.addEventListener('wheel', (e) => {
+  if (mode !== 'knobs') return;
+  e.preventDefault();
+  turnVolume(-e.deltaY * 0.0009);
+}, { passive: false });
+el.addEventListener('click', (e) => {
+  if (pressMoved > 6) return;                      // that was a turn, not a tap
+  const name = pick(e.clientX, e.clientY);
+  if (!reachable(name)) return;
+  if (mode === 'knobs') { if (name === KNOB_PWR) togglePower(); return; }
   const act = actions[name][0];
   if (act === 'zoom') zoomIn();
-  else if (act === 'music') iframe.contentWindow?.postMessage({ type: 'speakers' }, '*');
-  else if (act === 'fan') audio.toggleFan();
-  else if (act === 'power') {
-    powered = !powered;
-    setKnob('Speaker_L_Knob_Power', THREE.MathUtils.degToRad(powered ? 30 : -30));
-    audio.setPower(powered);
-  }
+  else if (act === 'knob') knobsIn(name === KNOB_PWR);
 });
 
-// ------------------------------------------------------------------ zoom to the screen
+// ------------------------------------------------------------------ moving the camera
 const tween = { t: 1, dur: 1.1, fromP: new THREE.Vector3(), toP: new THREE.Vector3(),
   fromQ: new THREE.Quaternion(), toQ: new THREE.Quaternion(), done: null };
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-function moveTo(p, q, done) {
+function moveTo(p, q, done, dur = 1.1) {
   tween.fromP.copy(camera.position); tween.fromQ.copy(camera.quaternion);
-  tween.toP.copy(p); tween.toQ.copy(q); tween.t = 0; tween.done = done; mode = 'moving';
+  tween.toP.copy(p); tween.toQ.copy(q); tween.t = 0; tween.dur = dur; tween.done = done; mode = 'moving';
 }
 // sitting up to the PC: close enough to use it, but with both speakers still in view
 const zoomBox = new THREE.Box3().setFromObject(named.VA_Screen);
@@ -472,9 +631,11 @@ function zoomPose() {
   const q = new THREE.Quaternion();   // looking straight down -z at the screen
   return [p, q];
 }
+const setHud = (txt) => { $('hud').textContent = txt; $('hud').style.opacity = txt ? 1 : 0; };
+const SEATED_HUD = 'Tap the monitor to use the PC';
 function zoomIn() {
-  $('tip').style.display = 'none';
-  $('hud').style.opacity = 0;
+  $('tip').style.display = 'none'; hovered = null;
+  setHud('');
   const [p, q] = zoomPose();
   moveTo(p, q, () => {
     mode = 'zoomed';
@@ -488,9 +649,44 @@ function zoomOut() {
   iframe.classList.remove('on');
   monitorEl.classList.remove('close');
   $('back').style.display = 'none';
-  moveTo(seatPos, seatQuat, () => { mode = 'seated'; $('hud').style.opacity = 1; });
+  moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); });
 }
-$('back').addEventListener('click', zoomOut);
+// up close to the speaker's knobs: lean in until they fill a good part of the view
+let knobsReturn = 'seated';
+function knobsPose() {
+  const kv = knobs[KNOB_VOL], kp = knobs[KNOB_PWR];
+  const a = new THREE.Box3().setFromObject(kv.mesh).getCenter(new THREE.Vector3());
+  const b = new THREE.Box3().setFromObject(kp.mesh).getCenter(new THREE.Vector3());
+  const target = a.clone().add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0.006, 0));
+  const eye = target.clone().addScaledVector(kv.out, 0.11).add(new THREE.Vector3(0, 0.008, 0));
+  const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(eye, target, new THREE.Vector3(0, 1, 0)));
+  return [eye, q];
+}
+function knobsIn() {
+  knobsReturn = mode === 'zoomed' ? 'zoomed' : 'seated';
+  $('tip').style.display = 'none'; hovered = null;
+  iframe.classList.remove('on');
+  setHud('');
+  const [p, q] = knobsPose();
+  moveTo(p, q, () => {
+    mode = 'knobs';
+    $('back').style.display = 'block';
+    setHud(coarse ? 'Roll your finger around the volume knob · tap the power button' : 'Roll the volume knob (or scroll) · click the power button');
+    setTimeout(() => { if (mode === 'knobs') setHud(''); }, 4500);
+    hintStart = clock.elapsedTime + 0.4;            // the two knobs breathe once as you arrive
+  }, 0.9);
+}
+function knobsOut() {
+  setHud('');
+  if (knobsReturn === 'zoomed') {
+    const [p, q] = zoomPose();
+    moveTo(p, q, () => { mode = 'zoomed'; iframe.classList.add('on'); }, 0.9);
+  } else {
+    $('back').style.display = 'none';
+    moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); }, 0.9);
+  }
+}
+$('back').addEventListener('click', () => (mode === 'knobs' ? knobsOut() : zoomOut()));
 
 // ------------------------------------------------------------------ the PC
 const powerOn = () => iframe.contentWindow?.postMessage({ type: 'power' }, '*');
@@ -612,6 +808,9 @@ renderer.setAnimationLoop(() => {
   screenTint.value.lerp(tintTarget, 1 - Math.exp(-dt * 4));
   runFan(clock.elapsedTime);
   runClock(() => audio.tick());
+  updateHints(clock.elapsedTime, dt);
+  updatePowerKnob(dt);
+  updateDial();
   dust.update(clock.elapsedTime);
   renderer.render(scene, camera);
   cssRenderer.render(cssScene, camera);
