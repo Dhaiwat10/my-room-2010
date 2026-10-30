@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.7284428477287292,
+   "lightScale": 0.7283985614776611,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.018166037276387215
+   "screenScale": 0.01816302351653576
   },
   "desk": {
    "albedo": {
@@ -25,12 +25,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 2.7661678791046143,
+   "lightScale": 2.7660701274871826,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.22809362411499023,
+   "screenScale": 0.22803032398223877,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -46,12 +46,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.2843029499053955,
+   "lightScale": 2.3110413551330566,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.453172206878662,
+   "screenScale": 4.4414873123168945,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -67,12 +67,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.02397025376558304,
+   "lightScale": 0.024013742804527283,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005769848823547363
+   "screenScale": 0.005769028794020414
   },
   "art": {
    "albedo": {
@@ -83,12 +83,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5690068006515503,
+   "lightScale": 0.5689874291419983,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.00648293225094676
+   "screenScale": 0.006478758063167334
   }
  },
  "objects": {
@@ -101,11 +101,11 @@
   "G_pc": "pc",
   "Monitor": "pc",
   "Keyboard": "pc",
-  "Mouse": "pc",
   "Speaker_R": "pc",
   "Speaker_L": "pc",
   "Speaker_L_Knob_Power": "pc",
   "Speaker_L_Knob_Volume": "pc",
+  "Mouse": "pc",
   "G_far": "far",
   "Clock_Hand_Hour": "art",
   "Clock_Hand_Minute": "art",

@@ -54,7 +54,7 @@ CLUSTERS = {
     'Speaker_L': ('Speaker_L',),
     'Speaker_R': ('Speaker_R',),
     'Keyboard':  ('Keyboard_Body', 'Keyboard_Keys', 'Keyboard_Legends', 'Keyboard_LED', 'Keyboard_Logo'),
-    'Mouse':     ('Mouse_Shell', 'Mouse_Split', 'Mouse_Wheel'),
+    'Mouse':     ('Mouse_Shell', 'Mouse_Split', 'Mouse_Wheel', 'Mouse_Logo'),
     'Tower':     ('PC_',),
     'Modem':     ('Modem',),
     'Spindle':   ('CD_Spindle',),
