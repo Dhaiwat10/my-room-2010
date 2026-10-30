@@ -1,0 +1,13 @@
+# Blender's automatic backups and intermediate bakes
+*.blend1
+build/
+
+# dependencies and build output (web/pc is built from pc/ with `bun run build`)
+node_modules/
+web/pc/
+
+# quick look-dev previews
+renders/_*
+
+.wrangler/
+.DS_Store

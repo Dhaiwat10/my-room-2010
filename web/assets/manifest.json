@@ -1,0 +1,113 @@
+{
+ "groups": {
+  "room": {
+   "albedo": {
+    "hi": "room_albedo_hi.jpg",
+    "lo": "room_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "room_light_hi.jpg",
+    "lo": "room_light_lo.jpg"
+   },
+   "lightScale": 0.7340137362480164,
+   "screen": {
+    "hi": "room_screen_hi.jpg",
+    "lo": "room_screen_lo.jpg"
+   },
+   "screenScale": 0.018258994445204735
+  },
+  "desk": {
+   "albedo": {
+    "hi": "desk_albedo_hi.jpg",
+    "lo": "desk_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "desk_light_hi.jpg",
+    "lo": "desk_light_lo.jpg"
+   },
+   "lightScale": 2.7650225162506104,
+   "screen": {
+    "hi": "desk_screen_hi.jpg",
+    "lo": "desk_screen_lo.jpg"
+   },
+   "screenScale": 0.22872377932071686,
+   "emit": {
+    "hi": "desk_emit_hi.jpg",
+    "lo": "desk_emit_lo.jpg"
+   },
+   "emitScale": 4.0
+  },
+  "pc": {
+   "albedo": {
+    "hi": "pc_albedo_hi.jpg",
+    "lo": "pc_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "pc_light_hi.jpg",
+    "lo": "pc_light_lo.jpg"
+   },
+   "lightScale": 2.293546676635742,
+   "screen": {
+    "hi": "pc_screen_hi.jpg",
+    "lo": "pc_screen_lo.jpg"
+   },
+   "screenScale": 4.446402072906494,
+   "emit": {
+    "hi": "pc_emit_hi.jpg",
+    "lo": "pc_emit_lo.jpg"
+   },
+   "emitScale": 8.0
+  },
+  "far": {
+   "albedo": {
+    "hi": "far_albedo_hi.jpg",
+    "lo": "far_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "far_light_hi.jpg",
+    "lo": "far_light_lo.jpg"
+   },
+   "lightScale": 0.024461885914206505,
+   "screen": {
+    "hi": "far_screen_hi.jpg",
+    "lo": "far_screen_lo.jpg"
+   },
+   "screenScale": 0.006121483165770769
+  },
+  "art": {
+   "albedo": {
+    "hi": "art_albedo_hi.jpg",
+    "lo": "art_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "art_light_hi.jpg",
+    "lo": "art_light_lo.jpg"
+   },
+   "lightScale": 0.5547868609428406,
+   "screen": {
+    "hi": "art_screen_hi.jpg",
+    "lo": "art_screen_lo.jpg"
+   },
+   "screenScale": 0.00670220609754324
+  }
+ },
+ "objects": {
+  "G_room": "room",
+  "G_desk": "desk",
+  "Fan_Blades": "desk",
+  "Fan_Head": "desk",
+  "Tower": "pc",
+  "Speaker_L": "pc",
+  "Speaker_R": "pc",
+  "Modem": "pc",
+  "G_pc": "pc",
+  "Monitor": "pc",
+  "Keyboard": "pc",
+  "Mouse": "pc",
+  "G_far": "far",
+  "Art": "art"
+ },
+ "exposure": 0.18000000715255737,
+ "look": "None",
+ "logK": 256.0
+}
