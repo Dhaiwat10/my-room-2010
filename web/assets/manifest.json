@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.7279883623123169,
+   "lightScale": 0.7282047867774963,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.018167033791542053
+   "screenScale": 0.018166037276387215
   },
   "desk": {
    "albedo": {
@@ -25,12 +25,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 2.7542223930358887,
+   "lightScale": 2.7524449825286865,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.22828279435634613,
+   "screenScale": 0.2280934751033783,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -46,12 +46,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.253634452819824,
+   "lightScale": 2.2703592777252197,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.45008659362793,
+   "screenScale": 4.4622297286987305,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -67,12 +67,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.02364431507885456,
+   "lightScale": 0.023663843050599098,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005769597366452217
+   "screenScale": 0.005769848823547363
   },
   "art": {
    "albedo": {
@@ -83,12 +83,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5680667757987976,
+   "lightScale": 0.5693421363830566,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.0064840600825846195
+   "screenScale": 0.00648293225094676
   }
  },
  "objects": {
