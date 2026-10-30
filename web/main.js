@@ -379,9 +379,14 @@ function moveTo(p, q, done) {
   tween.fromP.copy(camera.position); tween.fromQ.copy(camera.quaternion);
   tween.toP.copy(p); tween.toQ.copy(q); tween.t = 0; tween.done = done; mode = 'moving';
 }
+// sitting up to the PC: close enough to use it, but with both speakers still in view
+const zoomBox = new THREE.Box3().setFromObject(named.VA_Screen);
+for (const n of ['Speaker_L', 'Speaker_R']) if (named[n]) zoomBox.expandByObject(named[n]);
+const zoomSize = zoomBox.getSize(new THREE.Vector3());
 function zoomPose() {
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  const d = Math.max(sSize.y / 2 / t, sSize.x / 2 / (t * camera.aspect)) * 1.04;
+  const w = Math.max(zoomSize.x, sSize.x) * 1.12, h = Math.max(zoomSize.y, sSize.y) * 1.15;
+  const d = Math.max(h / 2 / t, w / 2 / (t * camera.aspect));
   const p = sCenter.clone().add(new THREE.Vector3(0, 0, d));
   const q = new THREE.Quaternion();   // looking straight down -z at the screen
   return [p, q];
