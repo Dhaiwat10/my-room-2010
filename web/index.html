@@ -84,6 +84,13 @@
   #mute .x { display: none; }
   #mute.off .waves { display: none; }
   #mute.off .x { display: inline; }
+  /* the discs you can put in the DVD drive, shown while its tray is open and empty */
+  #shelf { position: fixed; left: 50%; bottom: max(54px, calc(env(safe-area-inset-bottom) + 44px)); transform: translateX(-50%);
+    display: flex; gap: 10px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 5; }
+  #shelf.on { opacity: 1; pointer-events: auto; }
+  #shelf button { display: flex; align-items: center; gap: 8px; background: var(--panel); color: var(--ink); border: 0;
+    border-radius: 999px; padding: 5px 14px 5px 5px; font: inherit; font-size: 13px; cursor: pointer; }
+  #shelf img { width: 34px; height: 34px; border-radius: 50%; display: block; }
   #tip { position: fixed; pointer-events: none; background: var(--panel); padding: 4px 9px; border-radius: 6px;
     font-size: 12px; display: none; transform: translate(12px, 12px); }
   #rotate { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; background: var(--panel);

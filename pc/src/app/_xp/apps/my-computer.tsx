@@ -1,7 +1,8 @@
 "use client";
 
-import { createElement, useState, type ComponentType } from "react";
+import { createElement, useEffect, useState, type ComponentType } from "react";
 import { myComputer, iconFor, type FsNode } from "../filesystem";
+import { onDisc } from "../../../disc";
 import {
   BackIcon,
   CodeFileIcon,
@@ -55,6 +56,11 @@ export function MyComputer() {
   const [back, setBack] = useState<FsNode[][]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [msg, setMsg] = useState<Msg | null>(null);
+  // a disc going in or out of the tower's drive shows up straight away, as it did in Explorer
+  useEffect(() => onDisc(() => {
+    setPath((p) => (p[1]?.name.endsWith("(F:)") ? [myComputer()] : [myComputer(), ...p.slice(1)]));
+    setSelected(null);
+  }), []);
   const here = path.at(-1)!;
   const items = here.children ?? [];
   const chosen = items.find((n) => n.name === selected) ?? null;

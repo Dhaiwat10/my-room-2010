@@ -10,6 +10,7 @@ import { StartMenu, Taskbar } from "./taskbar";
 import { Window } from "./window";
 import { WindowManager, useWm } from "./window-manager";
 import { toggleMusic } from "../../room-bridge";
+import { DISCS, onDisc } from "../../disc";
 
 export type Phase = "off" | "bios" | "boot" | "welcome" | "desktop";
 
@@ -148,7 +149,17 @@ function Desktop({ onTurnOff }: { onTurnOff: () => void }) {
       if (e.data?.type === "speakers") toggleMusic(() => openRef.current("winamp"));
     };
     addEventListener("message", onMessage);
-    return () => removeEventListener("message", onMessage);
+    // AutoPlay: a disc going into the drive starts its game once it has spun up
+    let spinUp = 0;
+    const offDisc = onDisc((d) => {
+      clearTimeout(spinUp);
+      if (d) spinUp = window.setTimeout(() => openRef.current(DISCS[d].app), 3200);
+    });
+    return () => {
+      removeEventListener("message", onMessage);
+      offDisc();
+      clearTimeout(spinUp);
+    };
   }, []);
   return (
     <div className="xp-desktop" style={{ background: wallpaperBackground(settings.wallpaper) }}>
@@ -171,7 +182,7 @@ const BIOS_LINES = [
   "Memory Testing : 262144K OK",
   "",
   "Detecting IDE Primary Master   ... ST340016A",
-  "Detecting IDE Secondary Master ... LITE-ON LTR-48125W",
+  "Detecting IDE Secondary Master ... HL-DT-ST DVDRAM GSA-H62N",
   "",
   "Booting from Hard Disk...",
 ];

@@ -1,6 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { currentDisc, onDisc } from "../../../disc";
+import { useWm } from "../window-manager";
+import { MsgBox } from "./msgbox";
 import { CRICKET_URL, LATELY } from "../../../content";
 import { CricketIcon } from "../icons";
 
@@ -20,6 +23,20 @@ const isTouchOnly = () => window.matchMedia(TOUCH_ONLY).matches;
 
 export function Cricket() {
   const touchOnly = useSyncExternalStore(subscribe, isTouchOnly, () => false);
+  // it's a 2006 retail game: no disc in the drive, no game (and pulling it out mid-match ends it)
+  const discIn = useSyncExternalStore(onDisc, () => currentDisc() === "cricket07", () => true);
+  const { dispatch } = useWm();
+
+  if (!discIn) {
+    return (
+      <div className="xp-app xp-cricket">
+        <MsgBox
+          msg={{ title: "Cricket 07", text: "Please insert the correct CD-ROM, select OK and restart application.", kind: "error" }}
+          onClose={() => dispatch({ type: "close", id: "cricket" })}
+        />
+      </div>
+    );
+  }
 
   if (CRICKET_URL && !touchOnly) {
     return (

@@ -431,10 +431,12 @@ camera.position.copy(seatPos);
 camera.quaternion.copy(seatQuat);
 fill.fillPos.value.copy(seatPos).add(new THREE.Vector3(-0.3, 1.0, 0.7));   // above and behind your left shoulder
 
+// keep all of Blender's frame visible whatever the screen shape; `lens` > 1 narrows it, for
+// close-ups where the seat's wide lens would bend things (down at the tower)
+const baseTan = () => Math.max(vTan, hTan / camera.aspect);
+let lens = 1, lensTo = 1;
 function fitFov() {
-  // keep all of Blender's frame visible whatever the screen shape
-  const t = Math.max(vTan, hTan / camera.aspect);
-  camera.fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(t)), 30, 100);
+  camera.fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(baseTan() / lens)), 15, 100);
   camera.updateProjectionMatrix();
 }
 
@@ -459,6 +461,7 @@ const actions = {
   Mouse: ['zoom', 'Logitech mouse'],
   Speaker_L_Knob_Volume: ['knob', 'Volume'],
   Speaker_L_Knob_Power: ['knob', 'Power'],
+  Tower: ['drive', 'LG DVD writer'],
 };
 const KNOB_VOL = 'Speaker_L_Knob_Volume', KNOB_PWR = 'Speaker_L_Knob_Power';
 const isKnob = (n) => n === KNOB_VOL || n === KNOB_PWR;
@@ -499,6 +502,7 @@ function addHull(key, src, scale) {
 addHull('pc', named.Monitor, 1.012);
 addHull('kb', named.Keyboard, 1.03);
 addHull('mouse', named.Mouse, 1.08);
+addHull('tower', named.Tower, 1.01);
 // the knobs get a clean soft ring in the panel's plane instead (a hull around a short
 // cylinder is half hidden by the panel and the knob itself)
 const ringTex = (() => {
@@ -524,7 +528,7 @@ function addRing(key, knob) {
 }
 addRing(KNOB_VOL, named[KNOB_VOL]);
 addRing(KNOB_PWR, named[KNOB_PWR]);
-const hullKey = (name) => ({ Screen: 'pc', Monitor: 'pc', Keyboard: 'kb', Mouse: 'mouse' })[name] ?? name;
+const hullKey = (name) => ({ Screen: 'pc', Monitor: 'pc', Keyboard: 'kb', Mouse: 'mouse', Tower: 'tower' })[name] ?? name;
 const hullT = new THREE.Matrix4(), hullS = new THREE.Matrix4(), hullB = new THREE.Matrix4();
 let hovered = null, hintStart = 3, hintNext = 3;
 function updateHints(t, dt) {
@@ -656,10 +660,163 @@ function updateDial() {
   tip.setAttribute('cx', Math.sin(a) * 40); tip.setAttribute('cy', -Math.cos(a) * 40);
 }
 
+// ------------------------------------------------------------------ the DVD writer
+// Tap the tower to crouch down to it. Tap the drive to eject: the button clicks, the motor
+// whirrs and the tray slides out with whatever disc is in it. Tap the disc to take it out,
+// put one in from the little shelf, tap the drive again to close it. A disc going in spins
+// up and XP's AutoPlay starts it; ejecting one takes it away from XP straight away.
+// The tray, its bed and the disc are baked closed, inside the drive, so out here they get
+// plain materials of their own rather than the (dark) light baked in there.
+const DISCS = { cricket07: { label: 'Cricket 07', tex: 'assets/disc_cricket07.jpg' } };
+const TRAY_TRAVEL = 0.135;                      // how far the tray comes out, metres
+const drive = (() => {
+  const tray = named.PC_Drive_Tray, bed = named.PC_Drive_Bed, disc = named.PC_Disc;
+  if (!tray || !bed || !disc) return null;
+  // the tray's moulding: a 12 cm well with an 8 cm one inside it, the spindle in the middle
+  // and the laser's slot running back from it
+  const bedTex = (() => {
+    const W = 256, H = Math.round(256 * 0.15 / 0.128), c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d'), mm = W / 128, cx = W / 2, cy = H - 75 * mm;   // the disc sits 75 mm back
+    g.fillStyle = '#1b1b1d'; g.fillRect(0, 0, W, H);
+    const ring = (r, fill, edge) => { g.beginPath(); g.arc(cx, cy, r * mm, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); if (edge) { g.strokeStyle = edge; g.lineWidth = 1.5; g.stroke(); } };
+    ring(60.5, '#111113', '#2a2a2d');
+    ring(40.5, '#0c0c0e', '#232326');
+    g.fillStyle = '#050506'; g.fillRect(cx - 9 * mm, 0, 18 * mm, cy - 14 * mm);   // the laser's slot
+    ring(14, '#18181a', '#2c2c30');
+    ring(5, '#3a3a3e');
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    return t;
+  })();
+  const bp = bed.geometry.attributes.position, buv = new Float32Array(bp.count * 2);
+  for (let i = 0; i < bp.count; i++) {   // Blender's local x, y on the tray's top
+    buv[i * 2] = bp.getX(i) / 0.128 + 0.5; buv[i * 2 + 1] = -bp.getZ(i) / 0.15 + 0.5;
+  }
+  bed.geometry.setAttribute('uv', new THREE.BufferAttribute(buv, 2));
+  bed.material = new THREE.MeshBasicMaterial({ map: bedTex, color: new THREE.Color(0.55, 0.55, 0.55) });
+  // the label, mapped straight down onto the disc's face (Blender's local xy)
+  const g = disc.geometry, p = g.attributes.position, R = 0.06, uv = new Float32Array(p.count * 2);
+  const a = THREE.MathUtils.degToRad(15), ca = Math.cos(a), sa = Math.sin(a);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = -p.getZ(i);
+    uv[i * 2] = (x * ca - y * sa) / R / 2 + 0.5; uv[i * 2 + 1] = (x * sa + y * ca) / R / 2 + 0.5;
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  const tex = new THREE.TextureLoader().load(DISCS.cricket07.tex);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  disc.material = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(0.27, 0.255, 0.235), transparent: true });
+  const parts = [tray, bed, disc].map((o) => ({ o, z: o.position.z }));
+  // a finger-sized target over the drive's face, for when you're down at the tower
+  const face = new THREE.Box3().setFromObject(tray);
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.02), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.name = 'Drive'; hit.position.copy(face.getCenter(new THREE.Vector3())); scene.add(hit);
+  return { tray, bed, disc, parts, hit, faceCentre: face.getCenter(new THREE.Vector3()),
+    discY: disc.position.y, open: 0, state: 'closed', has: 'cricket07', lift: 0, liftTarget: 0, wait: 0 };
+})();
+if (drive) { audio.driveAt = drive.faceCentre.clone(); named.Drive = drive.hit; pickables.push(drive.hit, drive.disc, drive.bed); }
+window.__drive = () => drive && { state: drive.state, has: drive.has, open: drive.open };   // for checking from the console
+const tellPc = () => iframe.contentWindow?.postMessage({ type: 'disc', disc: drive?.state === 'closed' ? drive.has : null }, '*');
+const shelf = document.createElement('div');
+shelf.id = 'shelf'; document.body.appendChild(shelf);
+function updateShelf() {
+  const show = mode === 'drive' && drive && drive.state === 'open' && !drive.has;
+  shelf.classList.toggle('on', !!show);
+  if (!show) return;
+  if (shelf.dataset.built) return;
+  shelf.dataset.built = '1';
+  shelf.innerHTML = Object.entries(DISCS).map(([id, d]) =>
+    `<button data-disc="${id}"><img src="${d.tex}" alt=""><span>${d.label}</span></button>`).join('');
+}
+shelf.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || !drive || drive.has || drive.state !== 'open') return;
+  drive.has = b.dataset.disc;
+  drive.lift = 1; drive.liftTarget = 0;           // it drops into the tray
+  drive.disc.visible = true;
+  audio.drive('clunk');
+  updateShelf();
+  setHud('Tap the drive to close it');
+});
+function driveTap(name) {
+  if (!drive) return;
+  if (name === 'PC_Disc' && drive.state === 'open' && drive.has) {   // lift the disc out
+    drive.has = null; drive.liftTarget = 1;
+    audio.knobClick(0.4);
+    setHud('Pick a disc to put in');
+    return;
+  }
+  if (drive.state === 'closed') {
+    drive.state = 'opening'; drive.wait = 0.35;   // the button, then the mechanism lets go
+    audio.drive('button');
+    tellPc();                                      // XP loses the disc the moment you eject
+  } else if (drive.state === 'open') {
+    drive.state = 'closing'; drive.wait = 0.1;
+    audio.drive('button');
+    setHud('');
+  }
+}
+function updateDrive(dt) {
+  if (!drive) return;
+  if (drive.wait > 0) {
+    drive.wait -= dt;
+    if (drive.wait <= 0) audio.drive('motor');
+  } else if (drive.state === 'opening' || drive.state === 'closing') {
+    const dir = drive.state === 'opening' ? 1 : -1;
+    drive.open = THREE.MathUtils.clamp(drive.open + dir * dt / 0.95, 0, 1);
+    if (drive.open === 1 && dir > 0) {
+      drive.state = 'open'; audio.drive('clunk');
+      if (mode === 'drive') setHud(drive.has ? 'Tap the disc to take it out · tap the drive to close' : 'Pick a disc to put in');
+    }
+    if (drive.open === 0 && dir < 0) {
+      drive.state = 'closed'; audio.drive('clunk');
+      if (drive.has) { audio.drive('spin'); tellPc(); }
+    }
+  }
+  // the tray eases in and out of its travel, like a geared motor
+  const k = drive.open * drive.open * (3 - 2 * drive.open);
+  for (const p of drive.parts) p.o.position.z = p.z + k * TRAY_TRAVEL;
+  drive.hit.position.z = drive.faceCentre.z + k * TRAY_TRAVEL;
+  // taking a disc out lifts it up towards you and away; putting one in drops it in
+  drive.lift += (drive.liftTarget - drive.lift) * (1 - Math.exp(-dt * 9));
+  drive.disc.position.y = drive.discY + drive.lift * 0.06;
+  drive.disc.position.z += drive.lift * 0.05;
+  drive.disc.material.opacity = 1 - drive.lift;
+  drive.disc.visible = drive.lift < 0.98;
+  updateShelf();
+}
+// down at the tower: in front of the drive and a little above, the open tray in frame
+const DRIVE_LENS = 2.2;
+function drivePose() {
+  const t = baseTan() / DRIVE_LENS;
+  const target = drive.faceCentre.clone().add(new THREE.Vector3(0, -0.02, TRAY_TRAVEL * 0.5));
+  const d = Math.max(0.3 / 2 / t, 0.3 / 2 / (t * camera.aspect));
+  const eye = target.clone().add(new THREE.Vector3(0, 0.85, 1).normalize().multiplyScalar(d));
+  const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(eye, target, new THREE.Vector3(0, 1, 0)));
+  return [eye, q];
+}
+function driveIn() {
+  $('tip').style.display = 'none'; hovered = null;
+  setHud('');
+  const [p, q] = drivePose();
+  lensTo = DRIVE_LENS;
+  moveTo(p, q, () => {
+    mode = 'drive';
+    $('back').style.display = 'block';
+    setHud(drive.state === 'open' ? (drive.has ? 'Tap the disc to take it out · tap the drive to close' : 'Pick a disc to put in') : 'Tap the drive to open the tray');
+  }, 1.0);
+}
+function driveOut() {
+  setHud('');
+  lensTo = 1;
+  $('back').style.display = 'none';
+  moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); }, 1.0);
+}
+
 // ------------------------------------------------------------------ pointer
-let mode = 'seated';   // seated | moving | zoomed | knobs
+let mode = 'seated';   // seated | moving | zoomed | knobs | drive
 const el = renderer.domElement;
-const reachable = (name) => name && (mode === 'seated' || (isKnob(name) && (mode === 'zoomed' || mode === 'knobs')));
+const reachable = (name) => name && (mode === 'seated' ? name in actions
+  : mode === 'drive' ? ['Drive', 'PC_Disc', 'PC_Drive_Bed', 'Tower'].includes(name)
+  : isKnob(name) && (mode === 'zoomed' || mode === 'knobs'));
 let rotary = null, pressMoved = 0, pressAt = null;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 el.addEventListener('pointerdown', (e) => {
@@ -688,8 +845,8 @@ el.addEventListener('pointermove', (e) => {
   hovered = reachable(name) ? name : null;
   el.style.cursor = hovered ? (mode === 'knobs' && hovered === KNOB_VOL ? 'grab' : 'pointer') : (mode === 'knobs' ? 'grab' : 'default');
   const tip = $('tip');
-  tip.style.display = hovered && mode !== 'knobs' ? 'block' : 'none';
-  if (hovered) { tip.textContent = actions[hovered][1]; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
+  tip.style.display = hovered && mode !== 'knobs' && mode !== 'drive' ? 'block' : 'none';
+  if (hovered && actions[hovered]) { tip.textContent = actions[hovered][1]; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
 });
 el.addEventListener('pointerup', () => { rotary = null; pressAt = null; });
 el.addEventListener('pointerleave', () => { if (!rotary) hovered = null; });
@@ -703,9 +860,11 @@ el.addEventListener('click', (e) => {
   const name = pick(e.clientX, e.clientY);
   if (!reachable(name)) return;
   if (mode === 'knobs') { if (name === KNOB_PWR) togglePower(); return; }
+  if (mode === 'drive') { driveTap(name); return; }
   const act = actions[name][0];
   if (act === 'zoom') zoomIn();
   else if (act === 'knob') knobsIn(name === KNOB_PWR);
+  else if (act === 'drive' && drive) driveIn();
 });
 
 // ------------------------------------------------------------------ moving the camera
@@ -785,7 +944,7 @@ function knobsOut() {
     moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); }, 0.9);
   }
 }
-$('back').addEventListener('click', () => (mode === 'knobs' ? knobsOut() : zoomOut()));
+$('back').addEventListener('click', () => (mode === 'knobs' ? knobsOut() : mode === 'drive' ? driveOut() : zoomOut()));
 
 // ------------------------------------------------------------------ the PC
 const powerOn = () => iframe.contentWindow?.postMessage({ type: 'power' }, '*');
@@ -823,7 +982,7 @@ hookPc();
 addEventListener('message', (e) => {
   if (e.source !== iframe.contentWindow) return;
   const m = e.data || {};
-  if (m.type === 'pc-ready') { hookPc(); powerOn(); }
+  if (m.type === 'pc-ready') { hookPc(); powerOn(); tellPc(); }
   if (m.type === 'pc-audio') takeStreams();
   if (m.type === 'pc-phase') pcPhase = m.phase;
 });
@@ -926,6 +1085,12 @@ renderer.setAnimationLoop(() => {
   runClock(() => audio.tick());
   runModem(clock.elapsedTime);
   runTower(clock.elapsedTime);
+  updateDrive(dt);
+  if (lens !== lensTo) {
+    lens += (lensTo - lens) * (1 - Math.exp(-dt * 3.2));
+    if (Math.abs(lens - lensTo) < 0.002) lens = lensTo;
+    fitFov();
+  }
   updateHints(clock.elapsedTime, dt);
   updatePowerKnob(dt);
   updateDial();
