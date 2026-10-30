@@ -79,7 +79,12 @@ def group_of(o):
     return 'desk'
 
 
+CLOCK_HANDS = ('Clock_Hand_Hour', 'Clock_Hand_Minute', 'Clock_Hand_Second')   # turned in the browser
+
+
 def cluster_of(o, group):
+    if o.name in CLOCK_HANDS:
+        return o.name
     for name, prefixes in CLUSTERS.items():
         if o.name.startswith(prefixes) and o.name != WEB_SCREEN:
             return name
@@ -229,7 +234,7 @@ for o in [o for o in candidates if o.name.startswith(('Art_', 'Clock_')) and len
     bpy.ops.mesh.separate(type='MATERIAL')
     bpy.ops.object.mode_set(mode='OBJECT')
     candidates += [x for x in scene.objects if x.select_get() and x not in candidates]
-art_parts = [o for o in candidates if o.name.startswith(('Art_', 'Clock_'))]
+art_parts = [o for o in candidates if o.name.startswith(('Art_', 'Clock_')) and o.name not in CLOCK_HANDS]
 loose = set(shell_parts) | set(art_parts)      # unwrapped one by one, merged afterwards
 
 # ---------------------------------------------------------------- group + join

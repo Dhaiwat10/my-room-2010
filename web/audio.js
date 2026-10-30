@@ -152,6 +152,37 @@ export class RoomAudio {
     if (ctx.state === 'running') s.play();
   }
 
+  // the Ajanta clock: a quiet quartz tick once a second from the wall, the kind you only hear
+  // when the room's gone quiet. Two slightly different clicks alternate, as real movements do.
+  addClock(scene, at) {
+    const ctx = this.ctx, SR = ctx.sampleRate;
+    const click = (pitch, gain) => {
+      const len = Math.floor(SR * 0.03), b = ctx.createBuffer(1, len, SR), d = b.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        const t = i / SR;
+        const env = Math.exp(-t / 0.0025);                                   // the snap
+        const ring = Math.exp(-t / 0.008) * Math.sin(2 * Math.PI * pitch * t); // plastic case ringing
+        d[i] = gain * (env * (Math.random() * 2 - 1) * 0.6 + ring * 0.4);
+      }
+      return b;
+    };
+    this.clickBuffers = [click(3100, 1.0), click(2700, 0.85)];
+    this.clock = this.positional(scene, at, 0.05, 0.4);
+    this.clock.setRolloffFactor(1.2);
+    this.clockFilter = eq(ctx, 'highpass', 900, 0.7);
+    this.clock.setNodeSource(this.clockFilter);      // each tick is a one-shot played into this
+    this.tickCount = 0;
+  }
+
+  tick() {
+    if (!this.clock || this.ctx.state !== 'running') return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.clickBuffers[this.tickCount++ % 2];
+    src.playbackRate.value = 0.97 + Math.random() * 0.06;
+    src.connect(this.clockFilter);
+    src.start();
+  }
+
   // a MediaStream from the PC page (one per audio graph it creates)
   addStream(stream) {
     if (!this.split || this.streams.has(stream)) return;

@@ -190,6 +190,35 @@ function runFan(t) {
   }
 }
 
+// ------------------------------------------------------------------ the Ajanta clock
+// Keeps the visitor's real local time. The hands were baked pointing at 12; each turns about
+// the clock's face (Blender's local y = glTF's local -z), clockwise as seen from the room.
+// The second hand steps once a second like a quartz movement, with a tiny settle.
+const clockHands = ['Clock_Hand_Hour', 'Clock_Hand_Minute', 'Clock_Hand_Second']
+  .map((n) => named[n]).filter(Boolean).map((mesh) => ({ mesh, base: mesh.quaternion.clone() }));
+const CLOCK_AXIS = new THREE.Vector3(0, 0, -1);
+const handQ = new THREE.Quaternion();
+let lastSecond = -1;
+function runClock(onTick) {
+  if (clockHands.length !== 3) return;
+  const now = new Date();
+  const ms = now.getMilliseconds(), s = now.getSeconds(), m = now.getMinutes(), h = now.getHours() % 12;
+  // the step: snaps to the new second in ~60 ms, overshoots a hair and settles
+  const k = Math.min(ms / 60, 1);
+  const settle = k < 1 ? k * k * 1.06 : 1 + 0.06 * Math.exp(-(ms - 60) / 25) * Math.cos((ms - 60) / 18);
+  const sec = s - 1 + Math.min(settle, 1.06);
+  const angles = [
+    ((h + m / 60 + s / 3600) / 12) * Math.PI * 2,
+    ((m + s / 60) / 60) * Math.PI * 2,
+    (sec / 60) * Math.PI * 2,
+  ];
+  clockHands.forEach((hand, i) => {
+    handQ.setFromAxisAngle(CLOCK_AXIS, angles[i]);
+    hand.mesh.quaternion.copy(hand.base).multiply(handQ);
+  });
+  if (s !== lastSecond) { if (lastSecond >= 0) onTick(); lastSecond = s; }
+}
+
 // ------------------------------------------------------------------ the monitor's screen
 // The running PC (web/pc, built from pc/) sits on the screen itself, in a CSS 3D layer laid
 // exactly over the panel: whatever it's doing (BIOS, boot, windows, Winamp) is what you see,
@@ -293,6 +322,7 @@ function fitFov() {
 // the wall behind the desk is at y = 1.8 m in Blender, i.e. z = -1.8 here
 audio.attach(scene, center(named.Speaker_L), center(named.Speaker_R), center(named.Tower),
   { wallZ: -1.8, deskY: DESK_TOP });
+if (named.Clock_Frame || named.Art) audio.addClock(scene, new THREE.Vector3(-1.22, 1.40, -1.79));   // the clock on the wall (Blender -1.22, 1.79, 1.40)
 if (named.Fan_Blades) {
   audio.addPedestalFan(scene, named.Fan_Blades.getWorldPosition(new THREE.Vector3()));
   if (fanHead) fanHead.attach(audio.pedestal);   // the whoosh turns with the head
@@ -495,6 +525,7 @@ renderer.setAnimationLoop(() => {
   // the monitor's glow on the desk follows the screen, eased so it doesn't flicker
   screenTint.value.lerp(tintTarget, 1 - Math.exp(-dt * 4));
   runFan(clock.elapsedTime);
+  runClock(() => audio.tick());
   dust.update(clock.elapsedTime);
   renderer.render(scene, camera);
   cssRenderer.render(cssScene, camera);
