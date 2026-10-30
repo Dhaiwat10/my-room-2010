@@ -11,6 +11,9 @@ Windows XP machine on the monitor, and its sound coming out of the desk speakers
   reflection probe, so the browser can add highlights and reflections.
 - `web/` — the site: `main.js` (scene, camera, screen glow, specular), `audio.js` (3D speakers, fans).
   Look-dev flags: `?spec=0` (no specular), `?spec=only|env|keys|screen`, `?specgain=`, `?envgain=`.
+  Post-processing (bloom, focus when leaning in, AgX, vignette, grain): `?post=0` turns it off;
+  `?bloom=`, `?threshold=`, `?grain=`, `?vignette=`, `?dof=`, `?msaa=` tune it. `__bench()` in the console
+  gives ms per frame.
 - `pc/` — the XP machine (React + Vite), built into `web/pc/`.
 - `art/` — posters, photos and repainted textures used in the scene.
 
