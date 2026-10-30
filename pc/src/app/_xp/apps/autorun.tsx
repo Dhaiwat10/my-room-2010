@@ -6,7 +6,7 @@ import { useWm } from "../window-manager";
 import { MsgBox, type Msg } from "./msgbox";
 
 // The menu a game disc's autorun.exe threw up when it went in: the box art and a few big
-// buttons. Only Cricket 07 actually runs on this PC, so Play and Install own up to that.
+// buttons. Only Cricket 07 actually runs on this PC, so Play and Install say so and point there.
 export function AutoRun() {
   const { dispatch } = useWm();
   const disc = useSyncExternalStore(onDisc, currentDisc, () => null);
@@ -22,7 +22,7 @@ export function AutoRun() {
   const { title } = DISCS[disc];
   const notHere: Msg = {
     title,
-    text: `${title} was never installed on this PC. Only Cricket 07 runs here — swap its disc back in.`,
+    text: `Sorry, ${title} won't run here, it's just the disc. If you want to play a game, try inserting the Cricket 07 disc.`,
     kind: "info",
   };
   return (
