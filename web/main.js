@@ -357,11 +357,21 @@ const actions = {
   Mouse: ['zoom', 'Logitech mouse'],
   Speaker_L: ['music', 'Speakers: play / pause Winamp'],
   Speaker_R: ['music', 'Speakers: play / pause Winamp'],
+  Speaker_L_Knob_Volume: ['volume', 'Volume: drag to turn'],
+  Speaker_L_Knob_Power: ['power', 'Speakers: on / off'],
   Tower: ['fan', 'The PC: listen to the fan'],
   Modem: ['none', 'BSNL broadband modem'],
   Spindle: ['none', 'Blank CD-Rs'],
 };
-const pickables = Object.keys(actions).map((n) => (n === 'Screen' ? screenMesh : named[n])).filter(Boolean);
+// the knobs are about 1.5 cm across: give each an invisible, finger-sized hit area
+for (const n of ['Speaker_L_Knob_Volume', 'Speaker_L_Knob_Power']) {
+  const k = named[n]; if (!k) continue;
+  const hit = new THREE.Mesh(new THREE.SphereGeometry(0.011, 12, 8), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.name = n; scene.add(hit);
+  hit.position.copy(new THREE.Box3().setFromObject(k).getCenter(new THREE.Vector3()));
+  named['hit:' + n] = hit;
+}
+const pickables = Object.keys(actions).map((n) => (n === 'Screen' ? screenMesh : named['hit:' + n] ?? named[n])).filter(Boolean);
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 function pick(x, y) {
@@ -374,22 +384,70 @@ function pick(x, y) {
 // you're sitting at the desk: the view stays put, you just point at things
 let mode = 'seated';   // seated | moving | zoomed
 const el = renderer.domElement;
+const isKnob = (n) => n === 'Speaker_L_Knob_Volume' || n === 'Speaker_L_Knob_Power';
 el.addEventListener('pointermove', (e) => {
-  if (mode !== 'seated' || e.pointerType !== 'mouse') return;
-  const name = pick(e.clientX, e.clientY);
+  if (e.pointerType !== 'mouse' || knobDrag) return;
+  if (mode !== 'seated' && mode !== 'zoomed') return;
+  let name = pick(e.clientX, e.clientY);
+  if (mode === 'zoomed' && !isKnob(name)) name = null;     // sat up to the PC, only the knobs are in reach
   el.style.cursor = name ? 'pointer' : 'default';
   const tip = $('tip');
   tip.style.display = name ? 'block' : 'none';
   if (name) { tip.textContent = actions[name][1]; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
 });
+// ------------------------------------------------------------------ the speaker's knobs
+// Volume: drag up or right to turn it clockwise (louder), down or left to turn it back; about
+// 270 degrees of travel, stopped at both ends like the real pot. Power: a click turns it a
+// notch and switches the speakers on or off.
+const knobs = {};
+for (const n of ['Speaker_L_Knob_Volume', 'Speaker_L_Knob_Power']) if (named[n]) knobs[n] = { mesh: named[n], base: named[n].quaternion.clone() };
+const KNOB_AXIS = new THREE.Vector3(0, 1, 0);   // the knob's shaft: Blender local z is glTF local y
+const VOL_TRAVEL = THREE.MathUtils.degToRad(270);
+const knobQ = new THREE.Quaternion();
+function setKnob(name, angle) {
+  const k = knobs[name]; if (!k) return;
+  // clockwise as you face it is negative about the shaft pointing at you
+  knobQ.setFromAxisAngle(KNOB_AXIS, -angle);
+  k.mesh.quaternion.copy(k.base).multiply(knobQ);
+}
+let volume = 0.7, powered = true, lastNotch = -1;
+const volAngle = (v) => (v - 0.5) * VOL_TRAVEL;
+setKnob('Speaker_L_Knob_Volume', volAngle(volume));
+setKnob('Speaker_L_Knob_Power', THREE.MathUtils.degToRad(30));
+let knobDrag = null;
+window.__knobs = () => ({ volume, powered });   // for checking from the console
+el.addEventListener('pointerdown', (e) => {
+  knobDrag = null;                                  // a new press always starts fresh
+  if ((mode !== 'seated' && mode !== 'zoomed') || pick(e.clientX, e.clientY) !== 'Speaker_L_Knob_Volume') return;
+  knobDrag = { x: e.clientX, y: e.clientY, v: volume, moved: 0 };
+  el.setPointerCapture(e.pointerId);
+});
+el.addEventListener('pointermove', (e) => {
+  if (!knobDrag) return;
+  const dx = e.clientX - knobDrag.x, dy = knobDrag.y - e.clientY;
+  knobDrag.moved = Math.max(knobDrag.moved, Math.abs(dx) + Math.abs(dy));
+  volume = THREE.MathUtils.clamp(knobDrag.v + (dx + dy) / 220, 0, 1);
+  setKnob('Speaker_L_Knob_Volume', volAngle(volume));
+  audio.setVolume(volume);
+  const notch = Math.round(volume * 20);         // the pot's faint detents
+  if (notch !== lastNotch) { if (lastNotch >= 0) audio.knobClick(0.25); lastNotch = notch; }
+});
+el.addEventListener('pointerup', () => { if (knobDrag) setTimeout(() => { knobDrag = null; }, 0); });
+
 el.addEventListener('click', (e) => {
-  if (mode !== 'seated') return;
+  if (mode !== 'seated' && mode !== 'zoomed') return;
+  if (knobDrag && knobDrag.moved > 3) return;    // that was a turn, not a click
   const name = pick(e.clientX, e.clientY);
-  if (!name) return;
+  if (!name || (mode === 'zoomed' && !isKnob(name))) return;
   const act = actions[name][0];
   if (act === 'zoom') zoomIn();
   else if (act === 'music') iframe.contentWindow?.postMessage({ type: 'speakers' }, '*');
   else if (act === 'fan') audio.toggleFan();
+  else if (act === 'power') {
+    powered = !powered;
+    setKnob('Speaker_L_Knob_Power', THREE.MathUtils.degToRad(powered ? 30 : -30));
+    audio.setPower(powered);
+  }
 });
 
 // ------------------------------------------------------------------ zoom to the screen
@@ -406,9 +464,11 @@ for (const n of ['Speaker_L', 'Speaker_R']) if (named[n]) zoomBox.expandByObject
 const zoomSize = zoomBox.getSize(new THREE.Vector3());
 function zoomPose() {
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  const w = Math.max(zoomSize.x, sSize.x) * 1.0, h = Math.max(zoomSize.y, sSize.y) * 1.03;   // speakers just in frame
+  const w = Math.max(zoomSize.x, sSize.x) * 1.0, h = Math.max(zoomSize.y, sSize.y) * 1.12;   // speakers just in frame
   const d = Math.max(h / 2 / t, w / 2 / (t * camera.aspect));
-  const p = sCenter.clone().add(new THREE.Vector3(0, 0, d));
+  // centred on the screen-and-speakers box, so the speaker knobs at the bottom are in reach too
+  const c = zoomBox.getCenter(new THREE.Vector3());
+  const p = new THREE.Vector3(c.x, c.y, sCenter.z + d);
   const q = new THREE.Quaternion();   // looking straight down -z at the screen
   return [p, q];
 }

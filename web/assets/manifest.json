@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.7286657691001892,
+   "lightScale": 0.7279883623123169,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.018171418458223343
+   "screenScale": 0.018167033791542053
   },
   "desk": {
    "albedo": {
@@ -25,12 +25,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 2.754037380218506,
+   "lightScale": 2.7542223930358887,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.22838209569454193,
+   "screenScale": 0.22828279435634613,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -46,12 +46,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.3705217838287354,
+   "lightScale": 2.253634452819824,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.447630882263184,
+   "screenScale": 4.45008659362793,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -67,12 +67,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.023643046617507935,
+   "lightScale": 0.02364431507885456,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005771042313426733
+   "screenScale": 0.005769597366452217
   },
   "art": {
    "albedo": {
@@ -83,12 +83,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5696315169334412,
+   "lightScale": 0.5680667757987976,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.006484180688858032
+   "screenScale": 0.0064840600825846195
   }
  },
  "objects": {
@@ -102,8 +102,10 @@
   "Monitor": "pc",
   "Keyboard": "pc",
   "Mouse": "pc",
-  "Speaker_L": "pc",
   "Speaker_R": "pc",
+  "Speaker_L": "pc",
+  "Speaker_L_Knob_Power": "pc",
+  "Speaker_L_Knob_Volume": "pc",
   "G_far": "far",
   "Clock_Hand_Hour": "art",
   "Clock_Hand_Minute": "art",

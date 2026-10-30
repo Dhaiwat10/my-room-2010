@@ -98,11 +98,18 @@ export class RoomAudio {
 
   // wallZ / deskY: the back wall and desk top in three.js coordinates
   attach(scene, speakerL, speakerR, tower, { wallZ, deskY }) {
+    this.scene = scene;
     const mid = speakerL.clone().add(speakerR).multiplyScalar(0.5);
     const spread = (p) => mid.clone().add(p.clone().sub(mid).setY(0).multiplyScalar(WIDEN)).setY(p.y);
 
     // the PC's stereo output splits into left and right, each through its own speaker
     this.split = this.ctx.createChannelSplitter(2);
+    // the left speaker's power and volume knobs act on everything the PC plays
+    this.amp = this.ctx.createGain();
+    this.amp.connect(this.split);
+    this.volume = 0.7; this.powered = true;
+    this.amp.gain.value = this.volume;
+    this.knobAt = speakerL.clone();
     this.speakers = [speakerL, speakerR].map((at, ch) => {
       const [inp, out] = budgetSpeaker(this.ctx);
       this.split.connect(inp, ch);
@@ -191,7 +198,46 @@ export class RoomAudio {
     // mono sources (system sounds) still reach both speakers
     const up = this.ctx.createGain();
     up.channelCountMode = 'explicit'; up.channelCount = 2; up.channelInterpretation = 'speakers';
-    src.connect(up); up.connect(this.split);
+    src.connect(up); up.connect(this.amp);
+  }
+
+  // volume knob: 0..1, eased so turning it never zips
+  setVolume(v) {
+    this.volume = Math.min(Math.max(v, 0), 1);
+    if (this.powered) this.amp.gain.setTargetAtTime(this.volume * this.volume * 1.4, this.ctx.currentTime, 0.03);
+  }
+
+  // power knob: the click of the switch, a soft thump as the little amp comes on or goes off
+  setPower(on) {
+    this.powered = on;
+    const t = this.ctx.currentTime;
+    this.amp.gain.cancelScheduledValues(t);
+    this.amp.gain.setTargetAtTime(on ? this.volume * this.volume * 1.4 : 0, t + (on ? 0.12 : 0), on ? 0.08 : 0.02);
+    this.knobClick(on ? 0.9 : 0.75);
+    if (this.ctx.state !== 'running') return;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.frequency.setValueAtTime(70, t + 0.03); o.frequency.exponentialRampToValueAtTime(30, t + 0.2);
+    g.gain.setValueAtTime(0, t + 0.03); g.gain.linearRampToValueAtTime(on ? 0.05 : 0.025, t + 0.045);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    o.connect(g); g.connect(this.split, 0, 0); g.connect(this.split, 0, 1);   // through both speakers
+    o.start(t + 0.03); o.stop(t + 0.3);
+  }
+
+  // the knob's own mechanical click, from where it is on the desk
+  knobClick(gain = 0.5) {
+    if (!this.knobAt || this.ctx.state !== 'running') return;
+    if (!this.knobSrc) {
+      this.knobSrc = this.positional(this.scene, this.knobAt, 1, 0.3);
+      this.knobIn = this.ctx.createGain(); this.knobSrc.setNodeSource(this.knobIn);
+      const SR = this.ctx.sampleRate, len = Math.floor(SR * 0.025);
+      this.knobBuf = this.ctx.createBuffer(1, len, SR);
+      const d = this.knobBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) { const t = i / SR; d[i] = Math.exp(-t / 0.002) * (Math.random() * 2 - 1) * 0.5 + Math.exp(-t / 0.006) * Math.sin(2 * Math.PI * 2200 * t) * 0.3; }
+    }
+    const s = this.ctx.createBufferSource(); s.buffer = this.knobBuf;
+    s.playbackRate.value = 0.9 + Math.random() * 0.2;
+    const g = this.ctx.createGain(); g.gain.value = 0.12 * gain;
+    s.connect(g); g.connect(this.knobIn); s.start();
   }
 
   // browsers only start sound after a click or key press

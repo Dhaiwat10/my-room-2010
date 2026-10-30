@@ -79,7 +79,9 @@ def group_of(o):
     return 'desk'
 
 
-CLOCK_HANDS = ('Clock_Hand_Hour', 'Clock_Hand_Minute', 'Clock_Hand_Second')   # turned in the browser
+CLOCK_HANDS = ('Clock_Hand_Hour', 'Clock_Hand_Minute', 'Clock_Hand_Second')
+# pieces the browser moves on their own: clock hands, the speaker's knobs
+CLOCK_HANDS += ('Speaker_L_Knob_Power', 'Speaker_L_Knob_Volume')
 
 
 def cluster_of(o, group):
