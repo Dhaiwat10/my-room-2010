@@ -768,7 +768,11 @@ function updateDrive(dt) {
     }
     if (drive.open === 0 && dir < 0) {
       drive.state = 'closed'; audio.drive('clunk');
-      if (drive.has) { audio.drive('spin'); tellPc(); }
+      if (drive.has) {
+        audio.drive('spin'); tellPc();
+        // sit back up to the monitor to watch it start, as the disc spins up
+        setTimeout(() => { if (mode === 'drive' && drive.state === 'closed') { lensTo = 1; zoomIn(); } }, 600);
+      }
     }
   }
   // the tray eases in and out of its travel, like a geared motor
@@ -880,7 +884,7 @@ const zoomBox = new THREE.Box3().setFromObject(named.VA_Screen);
 for (const n of ['Speaker_L', 'Speaker_R']) if (named[n]) zoomBox.expandByObject(named[n]);
 const zoomSize = zoomBox.getSize(new THREE.Vector3());
 function zoomPose() {
-  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  const t = baseTan();                // the seat's own lens, even mid-way back from a close-up
   const w = Math.max(zoomSize.x, sSize.x) * 1.0, h = Math.max(zoomSize.y, sSize.y) * 1.12;   // speakers just in frame
   const d = Math.max(h / 2 / t, w / 2 / (t * camera.aspect));
   // centred on the screen-and-speakers box, so the speaker knobs at the bottom are in reach too
