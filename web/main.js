@@ -115,7 +115,7 @@ if (pbr) {
   // what three's own materials define for a PMREM map (WebGLPrograms' generateCubeUVSize)
   const h = env.image.height, maxMip = Math.log2(h) - 2;
   // look-dev: ?spec=only shows just the specular; env / keys / screen show one term of it
-  const view = { only: 1, env: 2, keys: 3, screen: 4, keymap: 5, lightmap: 6 }[params.get('spec')];
+  const view = { only: 1, env: 2, keys: 3, screen: 4, keymap: 5, lightmap: 6, emit: 7, screenlight: 8 }[params.get('spec')];
   if (view) pbrDefines.SPEC_VIEW = view;
   Object.assign(pbrDefines, { PBR: 1, ENVMAP_TYPE_CUBE_UV: 1, CUBEUV_TEXEL_HEIGHT: 1 / h,
     CUBEUV_TEXEL_WIDTH: 1 / (3 * Math.max(Math.pow(2, maxMip), 7 * 16)), CUBEUV_MAX_MIP: maxMip.toFixed(1) });
@@ -272,7 +272,7 @@ for (const [group, g] of Object.entries(manifest.groups)) {
 
           c = base * (1.0 - metal) * (Lroom + Lscr + Lfill) + S * specGain + hdr(emit, emitScale);
           #ifdef SPEC_VIEW
-            c = (SPEC_VIEW == 1 ? S : SPEC_VIEW == 2 ? Senv : SPEC_VIEW == 3 ? Skeys : SPEC_VIEW == 4 ? S - Senv - Skeys : SPEC_VIEW == 5 ? E / PI : Lroom) * specGain;
+            c = (SPEC_VIEW == 1 ? S : SPEC_VIEW == 2 ? Senv : SPEC_VIEW == 3 ? Skeys : SPEC_VIEW == 4 ? S - Senv - Skeys : SPEC_VIEW == 5 ? E / PI : SPEC_VIEW == 6 ? Lroom : SPEC_VIEW == 7 ? hdr(emit, emitScale) : Lscr) * specGain;
           #endif
         #else
           c = base * (Lroom + Lscr + Lfill) + hdr(emit, emitScale);
@@ -1223,6 +1223,99 @@ const dust = (() => {
   return { update(t) { mat.uniforms.time.value = t; } };
 })();
 
+// ------------------------------------------------------------------ a living head
+// Sitting at the desk you're never perfectly still: your head follows your eyes, and you
+// breathe. Layered on top of wherever the camera is meant to be, only at the seat (leaning in
+// to use the PC, the knobs or the drive stays steady, so clicks land where you aim):
+//   - look: the head turns a little toward the mouse (or, on a phone, with its tilt) and shifts
+//     a centimetre or so with it, so the fan and the monitor slide against the wall behind
+//   - breath: a slow rise and fall of a few millimetres and a hint of sway, never looping
+// Kept small on purpose: the bake leaves out what the seat can't see, so a bigger turn would
+// show the edges. Off for anyone whose system asks for reduced motion; ?head=0 turns it off.
+const head = (() => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || params.get('head') === '0';
+  const YAW = THREE.MathUtils.degToRad(2.5), PITCH = THREE.MathUtils.degToRad(1.5);
+  const SHIFT_X = 0.015, SHIFT_Y = 0.008;          // metres of head movement at full look
+  const look = { x: 0, y: 0, tx: 0, ty: 0 };      // -1..1, eased toward the target
+  let w = 0;                                       // how much of it applies (fades with mode)
+  const base = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
+  const shown = { p: new THREE.Vector3(), q: new THREE.Quaternion(), valid: false };
+  const up = new THREE.Vector3(0, 1, 0), right = new THREE.Vector3(), camUp = new THREE.Vector3();
+  const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qc = new THREE.Quaternion();
+
+  // the mouse: where it sits in the window, centred; back to the middle when it leaves
+  addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    look.tx = (e.clientX / innerWidth) * 2 - 1;
+    look.ty = (e.clientY / innerHeight) * 2 - 1;
+  });
+  document.addEventListener('pointerleave', () => { look.tx = look.ty = 0; });
+  addEventListener('blur', () => { look.tx = look.ty = 0; });
+
+  // a phone: tilt to look. The rest angle re-centres slowly, so however it's held is "ahead".
+  // iOS only reports tilt after asking, which has to happen on a tap.
+  let rest = null;
+  function onTilt(e) {
+    if (e.beta == null || e.gamma == null) return;
+    const a = (screen.orientation?.angle ?? window.orientation ?? 0) * Math.PI / 180;
+    // tilt in the screen's own frame, whichever way up it's held
+    const tx = e.gamma * Math.cos(a) + e.beta * Math.sin(a);
+    const ty = e.beta * Math.cos(a) - e.gamma * Math.sin(a);
+    if (!rest) rest = { x: tx, y: ty };
+    rest.x += (tx - rest.x) * 0.01; rest.y += (ty - rest.y) * 0.01;
+    look.tx = THREE.MathUtils.clamp((tx - rest.x) / 12, -1, 1);
+    look.ty = THREE.MathUtils.clamp((ty - rest.y) / 12, -1, 1);
+  }
+  if (coarse && !reduced && 'DeviceOrientationEvent' in window) {
+    const listen = () => addEventListener('deviceorientation', onTilt);
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      addEventListener('touchend', function ask() {
+        removeEventListener('touchend', ask);
+        DeviceOrientationEvent.requestPermission().then((r) => { if (r === 'granted') listen(); }).catch(() => {});
+      });
+    } else listen();
+  }
+
+  return {
+    // before anything moves the camera this frame: take back last frame's offset, unless
+    // something else has put the camera somewhere new since (a move, a resize)
+    begin() {
+      if (shown.valid && camera.position.equals(shown.p) && camera.quaternion.equals(shown.q)) {
+        camera.position.copy(base.p); camera.quaternion.copy(base.q);
+      }
+      shown.valid = false;
+    },
+    // after: remember where the camera is meant to be, then add the head on top
+    apply(dt, t) {
+      base.p.copy(camera.position); base.q.copy(camera.quaternion);
+      w += ((!reduced && mode === 'seated' ? 1 : 0) - w) * (1 - Math.exp(-dt * 3));
+      if (w < 1e-4) return;
+      const k = 1 - Math.exp(-dt * 3.5);           // ~0.3 s to follow, no overshoot
+      look.x += (look.tx - look.x) * k;
+      look.y += (look.ty - look.y) * k;
+      // breath: ~4 s cycle, plus slow wandering made of incommensurate sines (never repeats)
+      const breath = Math.sin(t * 1.55) * 0.6 + Math.sin(t * 0.71 + 1.3) * 0.4;
+      const driftX = Math.sin(t * 0.13) * 0.6 + Math.sin(t * 0.31 + 2.1) * 0.4;
+      const driftY = Math.sin(t * 0.17 + 0.7) * 0.6 + Math.sin(t * 0.23 + 4.0) * 0.4;
+      const yaw = (-look.x * YAW + driftX * 0.0035) * w;
+      const pitch = (-look.y * PITCH + driftY * 0.0025 + breath * 0.0012) * w;
+      const roll = (Math.sin(t * 0.19 + 0.4) * 0.0018 - look.x * 0.004) * w;
+      right.set(1, 0, 0).applyQuaternion(base.q);
+      camUp.set(0, 1, 0).applyQuaternion(base.q);
+      camera.position.copy(base.p)
+        .addScaledVector(right, look.x * SHIFT_X * w)
+        .addScaledVector(camUp, (-look.y * SHIFT_Y + breath * 0.0025) * w);
+      // turn about the world's up, tip about the camera's own right, roll about its view axis
+      qa.setFromAxisAngle(up, yaw);
+      qb.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+      qc.setFromAxisAngle(new THREE.Vector3(0, 0, 1), roll);
+      camera.quaternion.copy(qa).multiply(base.q).multiply(qb).multiply(qc);
+      camera.updateMatrixWorld();
+      shown.p.copy(camera.position); shown.q.copy(camera.quaternion); shown.valid = true;
+    },
+  };
+})();
+
 // ------------------------------------------------------------------ the lens: post-processing
 // The scene is drawn into a half-float buffer (4x MSAA), still scene-linear, and only then
 // tone-mapped. That's what lets the brightest things (the lamp's bulb, the LEDs, highlights)
@@ -1341,6 +1434,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   time.value = clock.elapsedTime;
+  head.begin();
   if (mode === 'moving') {
     tween.t = Math.min(1, tween.t + dt / tween.dur);
     const k = ease(tween.t);
@@ -1360,6 +1454,7 @@ renderer.setAnimationLoop(() => {
     if (Math.abs(lens - lensTo) < 0.002) lens = lensTo;
     fitFov();
   }
+  head.apply(dt, clock.elapsedTime);
   updateHints(clock.elapsedTime, dt);
   updatePowerKnob(dt);
   updateDial();

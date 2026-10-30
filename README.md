@@ -13,7 +13,8 @@ Windows XP machine on the monitor, and its sound coming out of the desk speakers
   Look-dev flags: `?spec=0` (no specular), `?spec=only|env|keys|screen`, `?specgain=`, `?envgain=`.
   Post-processing (bloom, focus when leaning in, AgX, vignette, grain): `?post=0` turns it off;
   `?bloom=`, `?threshold=`, `?grain=`, `?vignette=`, `?dof=`, `?msaa=` tune it. `__bench()` in the console
-  gives ms per frame.
+  gives ms per frame. At the seat the head follows the mouse (or a phone's tilt) and breathes;
+  `?head=0` holds it still, as does the system's reduced-motion setting.
 - `pc/` — the XP machine (React + Vite), built into `web/pc/`.
 - `art/` — posters, photos and repainted textures used in the scene.
 
