@@ -160,7 +160,7 @@ gltf.scene.traverse((o) => {
 // So the blades really turn at ~20 rps (integrated from a slowly wandering speed), and each
 // frame draws them smeared across the angle they sweep while an imaginary shutter is open.
 const FAN_RUNNING = true;
-const FAN_RPS = 19.6;                          // ~1180 rpm
+const FAN_RPS = 15.5;                          // ~930 rpm: the fan on speed 2, calmer to watch
 const SHUTTER = 1 / 110;                       // seconds of motion each frame smears together
 const BLUR = 12;                               // copies drawn across that smear
 const fanHead = named.Fan_Head;
@@ -406,7 +406,7 @@ for (const n of ['Speaker_L', 'Speaker_R']) if (named[n]) zoomBox.expandByObject
 const zoomSize = zoomBox.getSize(new THREE.Vector3());
 function zoomPose() {
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  const w = Math.max(zoomSize.x, sSize.x) * 1.12, h = Math.max(zoomSize.y, sSize.y) * 1.15;
+  const w = Math.max(zoomSize.x, sSize.x) * 1.0, h = Math.max(zoomSize.y, sSize.y) * 1.03;   // speakers just in frame
   const d = Math.max(h / 2 / t, w / 2 / (t * camera.aspect));
   const p = sCenter.clone().add(new THREE.Vector3(0, 0, d));
   const q = new THREE.Quaternion();   // looking straight down -z at the screen
