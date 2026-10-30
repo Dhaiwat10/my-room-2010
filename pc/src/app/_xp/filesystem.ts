@@ -14,7 +14,6 @@ import {
   MyVideosIcon,
   NotepadIcon,
   PicturesIcon,
-  TextFileIcon,
 } from "./icons";
 import type { SoundName } from "./sounds";
 import { currentDisc, DISCS } from "../../disc";
@@ -105,16 +104,17 @@ let tree: FsNode | null = null;
 
 // Built on first use: it reads APPS, which isn't ready while modules load.
 export function myComputer(): FsNode {
-  if (tree) return tree;
+  if (tree) {
+    // cached, but F: follows whatever disc is in the drive
+    tree.children = tree.children!.map((n) => (n.name.endsWith("(F:)") ? cdDrive() : n));
+    return tree;
+  }
   const myDocuments = folder(
     "Dhaiwat's Documents",
     [
       folder("My Pictures", PICTURE_FILES, { open: "pictures", icon: PicturesIcon }),
       folder("My Music", SONG_FILES, { icon: MyMusicIcon }),
       folder("My Videos", CLIP_FILES, { icon: MyVideosIcon }),
-      folder("Work", [], { open: "work" }),
-      folder("Projects", [], { open: "projects" }),
-      file("about.txt", { icon: TextFileIcon, open: "about", note: "Text Document", size: "1 KB" }),
       file("resume_final_FINAL.doc", {
         note: "Microsoft Word Document",
         size: "48 KB",
@@ -170,7 +170,7 @@ export function myComputer(): FsNode {
           ]),
           folder("system32", [
             file("mspaint.exe", { open: "paint", icon: APPS.paint.icon, note: "Application" }),
-            file("notepad.exe", { open: "about", icon: NotepadIcon, note: "Application" }),
+            file("notepad.exe", { icon: NotepadIcon, note: "Application" }),
             file("calc.exe", { note: "Application", msg: cantOpen("calc.exe", "calc.exe is not a valid Win32 application.") }),
           ]),
         ]),

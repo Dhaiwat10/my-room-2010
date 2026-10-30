@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import { About } from "./apps/about";
 import { ControlPanel } from "./apps/control-panel";
 import { Cricket } from "./apps/cricket";
 import { Firefox } from "./apps/firefox";
@@ -9,26 +8,21 @@ import { Nero } from "./apps/nero";
 import { Paint } from "./apps/paint";
 import { cdError } from "./apps/game";
 import { Pictures } from "./apps/pictures";
-import { Projects } from "./apps/projects";
 import { RecycleBin } from "./apps/recycle-bin";
 import { UTorrent } from "./apps/utorrent";
 import { Vlc } from "./apps/vlc";
 import { Winamp } from "./apps/winamp";
-import { Work } from "./apps/work";
 import {
   AgeOfEmpiresIcon,
   BrianLaraIcon,
-  BriefcaseIcon,
   ComputerIcon,
   ControlPanelIcon,
   CounterStrikeIcon,
   CricketIcon,
   FifaIcon,
   FirefoxIcon,
-  FolderIcon,
   MovieMakerIcon,
   NeroIcon,
-  NotepadIcon,
   PaintIcon,
   PicturesIcon,
   RecycleBinIcon,
@@ -63,9 +57,6 @@ export type AppDef = {
 
 export const APPS = {
   mycomputer: { label: "My Computer", title: "My Computer", icon: ComputerIcon, size: { w: 600, h: 420 }, big: true, menu: false, component: MyComputer },
-  about: { label: "About me", title: "about.txt - Notepad", icon: NotepadIcon, size: { w: 440, h: 320 }, component: About },
-  work: { label: "Work", title: "Work", icon: BriefcaseIcon, size: { w: 520, h: 340 }, component: Work },
-  projects: { label: "Projects", title: "Projects", icon: FolderIcon, size: { w: 500, h: 320 }, component: Projects },
   vlc: { label: "VLC media player", title: "vroom.mp4 - VLC media player", icon: VlcIcon, size: { w: 560, h: 420 }, big: true, component: Vlc },
   pictures: { label: "My Pictures", title: "My Pictures", icon: PicturesIcon, size: { w: 540, h: 400 }, big: true, component: Pictures },
   paint: {
