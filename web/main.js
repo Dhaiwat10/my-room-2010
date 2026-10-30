@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -64,13 +65,24 @@ const params = new URLSearchParams(location.search);
 // everything red; ?look=punchy brings it back for comparison.
 const punchy = params.get('look') === 'punchy';
 const logK = manifest.logK ?? 0;   // 0: old bakes, light maps are plain sRGB
-// colour maps are sRGB (the GPU decodes them); log-encoded light maps are decoded in the shader
-const tex = (files, linear = false) => {
-  const t = texLoader.load(`assets/${files[tier]}${v}`);
-  t.flipY = false;
-  t.colorSpace = linear ? THREE.NoColorSpace : THREE.SRGBColorSpace;
-  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  return t;
+// colour maps are sRGB (the GPU decodes them); log-encoded light maps are decoded in the shader.
+// Each map comes as KTX2 (GPU-compressed, see tools/ktx2.py) when the bake made one, else JPEG;
+// ?ktx=0 forces the JPEGs. Returns the uniform, filled in when its texture arrives.
+const ktx2 = params.get('ktx') === '0' ? null
+  : new KTX2Loader(manager).setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/basis/').detectSupport(renderer);
+const tex = (g, key, linear = false) => {
+  const u = { value: black };   // until it arrives (black is defined below, used only later)
+  const done = (t) => {
+    t.flipY = false;
+    t.colorSpace = linear ? THREE.NoColorSpace : THREE.SRGBColorSpace;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    t.needsUpdate = true;
+    u.value = t;
+  };
+  const k = ktx2 && g[key + 'Ktx2'];
+  if (k) ktx2.load(`assets/${k[tier]}${v}`, done, undefined, () => texLoader.load(`assets/${g[key][tier]}${v}`, done));
+  else done(texLoader.load(`assets/${g[key][tier]}${v}`));
+  return u;
 };
 const black = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
 black.needsUpdate = true;
@@ -143,17 +155,17 @@ for (const [group, g] of Object.entries(manifest.groups)) {
   materials[group] = new THREE.ShaderMaterial({
     defines: { ...(logK ? { LOG_LIGHT: 1 } : {}), ...(punchy ? { AGX_PUNCHY: 1 } : { AGX_MOOD: 1 }), ...pbrDefines },
     uniforms: {
-      albedo: { value: tex(g.albedo) },
-      light: { value: tex(g.light, !!logK) },
-      emit: { value: g.emit ? tex(g.emit, !!logK) : black },
-      screen: { value: g.screen ? tex(g.screen, !!logK) : black },
+      albedo: tex(g, 'albedo'),
+      light: tex(g, 'light', !!logK),
+      emit: g.emit ? tex(g, 'emit', !!logK) : { value: black },
+      screen: g.screen ? tex(g, 'screen', !!logK) : { value: black },
       lightScale: { value: g.lightScale },
       emitScale: { value: g.emitScale ?? 0 },
       screenScale: { value: g.screenScale ?? 0 },
       ...(pbr ? {
-        nrm: { value: tex(g.nrm, true) },
-        surf: { value: tex(g.surf, true) },
-        keys: { value: tex(g.keys, true) },
+        nrm: tex(g, 'nrm', true),
+        surf: tex(g, 'surf', true),
+        keys: tex(g, 'keys', true),
         keysScale: { value: g.keysScale },
         ...spec,
       } : {}),
@@ -245,7 +257,8 @@ for (const [group, g] of Object.entries(manifest.groups)) {
           vec3 env = textureCubeUV(envMap, boxProject(P, R), rough).rgb;
           float seen = lum(textureCubeUV(envMap, N, 1.0).rgb);
           env *= clamp(lum(Lroom) / max(seen, 1e-4), 0.0, 1.5) * envGain;
-          vec3 S = env * envBRDF(f0, rough, NoV);
+          vec3 dfg = envBRDF(f0, rough, NoV);              // how much this surface reflects, all told
+          vec3 S = env * dfg;
           vec3 Senv = S;
 
           // the key lights: baked direct light x the lobe toward each, widened by its size
@@ -268,9 +281,15 @@ for (const [group, g] of Object.entries(manifest.groups)) {
           vec3 toS = q - P;
           float ds = length(toS);
           float norm = (a / min(1.0, a + hx / (2.0 * ds))) * (a / min(1.0, a + hy / (2.0 * ds)));
-          S += lobe(N, V, toS / ds, a, f0) * norm * Lscr * PI;
+          // nothing within a centimetre of the panel's own plane sees it head-on: that's the bezel
+          // round it, whose lip looks at the panel's dark border, not its picture
+          float front = smoothstep(0.004, 0.02, dot(P - scrCenter, scrNormal));
+          S += lobe(N, V, toS / ds, a, f0) * norm * Lscr * PI * front;
 
-          c = base * (1.0 - metal) * (Lroom + Lscr + Lfill) + S * specGain + hdr(emit, emitScale);
+          // what's reflected off the top isn't also scattered underneath: the diffuse keeps the rest
+          // (as Blender's Principled BSDF does), or glossier surfaces go grey and too bright
+          vec3 kd = (1.0 - metal) * (1.0 - min(dfg * specGain, vec3(1.0)));
+          c = base * kd * (Lroom + Lscr + Lfill) + S * specGain + hdr(emit, emitScale);
           #ifdef SPEC_VIEW
             c = (SPEC_VIEW == 1 ? S : SPEC_VIEW == 2 ? Senv : SPEC_VIEW == 3 ? Skeys : SPEC_VIEW == 4 ? S - Senv - Skeys : SPEC_VIEW == 5 ? E / PI : SPEC_VIEW == 6 ? Lroom : SPEC_VIEW == 7 ? hdr(emit, emitScale) : Lscr) * specGain;
           #endif
@@ -501,8 +520,9 @@ screenMesh.position.copy(sCenter);
 screenMesh.name = 'Screen';
 if (pbr) {
   spec.scrCenter.value.copy(screenBox.getCenter(new THREE.Vector3()));
-  spec.scrRight.value.set(sSize.x / 2, 0, 0);
-  spec.scrUp.value.set(0, sSize.y / 2, 0);
+  // the glowing area, as baked: the panel's outer 5 mm are its dark border (see the bake's inset)
+  spec.scrRight.value.set(sSize.x / 2 - 0.005, 0, 0);
+  spec.scrUp.value.set(0, sSize.y / 2 - 0.005, 0);
 }
 scene.add(screenMesh);
 
