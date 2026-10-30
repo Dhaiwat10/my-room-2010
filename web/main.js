@@ -292,6 +292,53 @@ function runModem(t) {
   });
 }
 
+// ------------------------------------------------------------------ the tower's front lights
+// Power is a steady green. The hard disk's red LED chatters away: solid-ish while XP boots,
+// then the odd scratch of activity (swap, antivirus, Winamp loading the next track), a bit
+// more while you're using the PC.
+const towerLeds = (() => {
+  const pwr = named.PC_LED_Power, hdd = named.PC_LED_HDD;
+  if (!pwr || !hdd) return null;
+  const glowTex = (rgb) => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, `rgba(${rgb},0.9)`); grd.addColorStop(0.22, `rgba(${rgb},0.3)`); grd.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  };
+  const make = (mesh, rgb, on) => {
+    mesh.material = new THREE.MeshBasicMaterial({ color: on, toneMapped: false });
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(rgb), blending: THREE.AdditiveBlending,
+      depthWrite: false, transparent: true, toneMapped: false, opacity: 0.6 }));
+    glow.position.copy(new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3())).add(new THREE.Vector3(0, 0, 0.0015));
+    glow.scale.setScalar(0.014); scene.add(glow);
+    return { mesh, glow };
+  };
+  make(pwr, '80,255,110', 0x3dff5a);
+  return { hdd: make(hdd, '255,60,40', 0xff3a24), on: true, until: 0, next: 0 };
+})();
+window.__tower = () => towerLeds && { on: towerLeds.on, at: towerLeds.hdd.glow.position.toArray() };   // for checking from the console
+const HDD_ON = new THREE.Color(0xff3a24), HDD_OFF = new THREE.Color(0x1a0806);
+function runTower(t) {
+  if (!towerLeds) return;
+  const s = towerLeds;
+  if (t > s.next) {
+    const booting = t < 35;
+    if (t > s.until) {                     // start a new stretch of disk activity, or rest
+      const busy = mode === 'zoomed' ? 2 : 1;
+      s.until = t + (booting ? 0.6 + Math.random() * 2.5 : 0.08 + Math.random() * (Math.random() < 0.15 ? 1.5 : 0.35));
+      s.next = booting ? t : t + (0.6 + Math.random() * 5) / busy;
+      s.on = false;
+    } else {
+      s.on = !s.on;
+      s.next = t + (booting ? 0.015 + Math.random() * 0.05 : 0.02 + Math.random() * 0.06);
+    }
+    if (t > s.until) s.on = false;
+    s.hdd.mesh.material.color.copy(s.on ? HDD_ON : HDD_OFF);
+    s.hdd.glow.material.opacity = s.on ? 0.6 : 0;
+  }
+}
+
 // ------------------------------------------------------------------ the monitor's screen
 // The running PC (web/pc, built from pc/) sits on the screen itself, in a CSS 3D layer laid
 // exactly over the panel: whatever it's doing (BIOS, boot, windows, Winamp) is what you see,
@@ -878,6 +925,7 @@ renderer.setAnimationLoop(() => {
   runFan(clock.elapsedTime);
   runClock(() => audio.tick());
   runModem(clock.elapsedTime);
+  runTower(clock.elapsedTime);
   updateHints(clock.elapsedTime, dt);
   updatePowerKnob(dt);
   updateDial();

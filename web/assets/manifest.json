@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.7276090979576111,
+   "lightScale": 0.7296391725540161,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.018155040219426155
+   "screenScale": 0.018130933865904808
   },
   "desk": {
    "albedo": {
@@ -25,12 +25,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 2.7507474422454834,
+   "lightScale": 2.7499310970306396,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.2297619879245758,
+   "screenScale": 0.22919529676437378,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -46,17 +46,17 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.2021446228027344,
+   "lightScale": 2.1587095260620117,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.468258857727051,
+   "screenScale": 4.446299076080322,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
    },
-   "emitScale": 8.0
+   "emitScale": 6.0
   },
   "far": {
    "albedo": {
@@ -67,12 +67,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.023516502231359482,
+   "lightScale": 0.023426011204719543,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005768697243183851
+   "screenScale": 0.00576903996989131
   },
   "art": {
    "albedo": {
@@ -83,12 +83,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5685796141624451,
+   "lightScale": 0.5681629776954651,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.006469553802162409
+   "screenScale": 0.006488630082458258
   }
  },
  "objects": {
@@ -96,7 +96,6 @@
   "G_desk": "desk",
   "Fan_Blades": "desk",
   "Fan_Head": "desk",
-  "Tower": "pc",
   "G_pc": "pc",
   "Monitor": "pc",
   "Keyboard": "pc",
@@ -111,6 +110,9 @@
   "Modem_LED_2": "pc",
   "Modem_LED_3": "pc",
   "Modem_LED_4": "pc",
+  "Tower": "pc",
+  "PC_LED_Power": "pc",
+  "PC_LED_HDD": "pc",
   "G_far": "far",
   "Clock_Hand_Hour": "art",
   "Clock_Hand_Minute": "art",
