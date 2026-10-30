@@ -15,6 +15,13 @@ What it does
     emit    - emission, HDR, only for groups that glow    (sRGB-encoded JPEG + scale)
   The browser multiplies albedo x light, adds emit and applies AgX tone mapping, so surface
   detail stays sharp while the lighting can be soft.
+- And what the browser needs to add specular on top (the diffuse bake can't hold it, since
+  highlights and reflections move with the eye):
+    nrm     - object-space normal in glTF axes, bump included   (linear JPEG)
+    surf    - roughness, metalness, dielectric F0 / 0.08         (linear JPEG, half size)
+    keys    - direct light from each key light on its own, HDR   (log JPEG, half size)
+  plus probe.exr, an equirect of the room seen from over the desk (screen off), which the
+  browser prefilters for reflections and parallax-corrects against the room's box.
 """
 import bpy, bmesh, sys, os, json, math
 import numpy as np
@@ -108,6 +115,31 @@ def select(objs, active=None):
 cam = bpy.data.objects['Cam_Seated']
 cam_pos = cam.matrix_world.translation.copy()
 cam_fwd = (cam.matrix_world.to_3x3() @ Vector((0, 0, -1))).normalized()
+
+# ---------------------------------------------------------------- surface, for the specular pass
+# metalness is zeroed below for the diffuse bakes; keep what each material really had, and its
+# dielectric reflectance (F0) from IOR and specular level
+SURFACE = {}
+for m in bpy.data.materials:
+    if not m.use_nodes:
+        continue
+    p = next((n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+    if p is None:
+        continue
+    f0 = 0.04
+    ior, lvl = p.inputs.get('IOR'), p.inputs.get('Specular IOR Level')
+    if ior is not None and not ior.is_linked:
+        f0 = ((ior.default_value - 1) / (ior.default_value + 1)) ** 2
+    if lvl is not None and not lvl.is_linked:
+        f0 *= 2 * lvl.default_value
+    SURFACE[m.name] = (p.inputs['Metallic'].default_value, min(f0, 0.08))
+
+# the reflection probe sits over the front of the desk, a little below eye height: most of what
+# shows reflections (desk top, keyboard, monitor, speakers) is right around it
+_desk = bpy.data.objects.get('Desk_Top')
+_desk_c = sum((_desk.matrix_world @ Vector(c) for c in _desk.bound_box), Vector()) / 8 if _desk else cam_pos
+PROBE_POS = cam_pos.lerp(_desk_c, 0.55)
+PROBE_POS.z = _desk_c.z + 0.3
 
 # ---------------------------------------------------------------- materials: diffuse-only for baking
 # no metals (their diffuse pass is black) and no subsurface, so albedo x light reproduces them
@@ -457,7 +489,7 @@ def log_encode(x):
     return np.log2(1.0 + LOG_K * np.clip(x, 0, 1)) / np.log2(1.0 + LOG_K)
 
 
-def write(name, a, hdr):
+def write(name, a, hdr, linear=False):
     """Save hi + lo versions.
 
     Colour maps are plain sRGB. HDR maps (light, emit) are divided by a scale so 99.8% of
@@ -473,8 +505,8 @@ def write(name, a, hdr):
     files = {}
     for tag, arr in (('hi', rgb), ('lo', half(rgb))):
         fn = f'{name}_{tag}.jpg'
-        enc = log_encode(arr / scale) if hdr else srgb(arr)
-        save_jpeg(enc, os.path.join(OUT, fn), quality=94 if hdr else 90)
+        enc = log_encode(arr / scale) if hdr else (np.clip(arr, 0, 1) if linear else srgb(arr))
+        save_jpeg(enc, os.path.join(OUT, fn), quality=94 if hdr or linear else 90)
         files[tag] = fn
     return files, scale
 
@@ -515,9 +547,135 @@ def lighting(mode):
         world_bg.inputs['Strength'].default_value = 0.0 if mode == 'screen' else world_strength
 
 
+# ---------------------------------------------------------------- specular: key lights, surface, probe
+# Each key light's direct light is baked on its own, lit white. The browser turns that into a
+# highlight: irradiance x GGX toward the light, so the shadows and the spot's cone come free
+# from the bake and only the direction is worked out live. Lights that sit together share one.
+KEYS = [(('DeskLamp_Light',), 0.03), (('Floor_Lamp', 'Left_Soft'), 0.35), (('Hall_Tube',), 0.45)]
+KEYS = [(tuple(n for n in names if n in bpy.data.objects), r) for names, r in KEYS]
+gl = lambda v: [round(v.x, 5), round(v.z, 5), round(-v.y, 5)]   # Blender -> glTF axes
+
+
+def keys_lighting(names):
+    for key, m, s in emission_inputs():
+        s.default_value = 0.0
+    for o in lights:
+        o.hide_render = o.name not in names
+    if world_bg:
+        world_bg.inputs['Strength'].default_value = 0.0
+
+
+def bake_keys(objs, img):
+    chans = []
+    for names, _ in KEYS:
+        saved = [(o, tuple(o.data.color)) for o in lights if o.name in names]
+        for o, _c in saved:
+            o.data.color = (1, 1, 1)
+        keys_lighting(names)
+        bake_into(objs, img, 'DIFFUSE', {'DIRECT'}, max(SAMPLES // 4, 16))
+        chans.append(denoise(img)[..., :3].mean(axis=2) if names else np.zeros(img.size[::-1], np.float32))
+        for o, c in saved:
+            o.data.color = c
+    lighting('all')
+    return np.stack(chans, axis=2)
+
+
+def bake_surface(objs, img):
+    """R roughness, G metalness, B dielectric F0 / 0.08: an emission shader stands in for each
+    material, fed from the same sockets its Principled BSDF reads."""
+    undo = []
+    for m in {m for ob in objs for m in ob.data.materials if m and m.use_nodes}:
+        nt = m.node_tree
+        outs = [n for n in nt.nodes if n.type == 'OUTPUT_MATERIAL']
+        out = next((n for n in outs if n.is_active_output), outs[0] if outs else None)
+        if out is None:
+            continue
+        p = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        cc = nt.nodes.new('ShaderNodeCombineColor')
+        em = nt.nodes.new('ShaderNodeEmission')
+        nt.links.new(cc.outputs[0], em.inputs['Color'])
+        met, f0 = SURFACE.get(m.name, (0.0, 0.04))
+        if p:
+            for i, (sock, val) in enumerate(((p.inputs['Roughness'], None), (p.inputs['Metallic'], met))):
+                if sock.is_linked:
+                    nt.links.new(sock.links[0].from_socket, cc.inputs[i])
+                else:
+                    cc.inputs[i].default_value = sock.default_value if val is None else val
+        else:
+            cc.inputs[0].default_value, cc.inputs[1].default_value = 1.0, 0.0
+        cc.inputs[2].default_value = f0 / 0.08
+        old = out.inputs['Surface'].links[0].from_socket if out.inputs['Surface'].is_linked else None
+        nt.links.new(em.outputs[0], out.inputs['Surface'])
+        undo.append((nt, out, old, (cc, em)))
+    bake_into(objs, img, 'EMIT', set(), 4)
+    for nt, out, old, nodes in undo:
+        if old is not None:
+            nt.links.new(old, out.inputs['Surface'])
+        for n in nodes:
+            nt.nodes.remove(n)
+
+
+def bake_normals(objs, img):
+    b = scene.render.bake
+    b.normal_space = 'OBJECT'
+    b.normal_r, b.normal_g, b.normal_b = 'POS_X', 'POS_Z', 'NEG_Y'   # straight into glTF axes
+    bake_into(objs, img, 'NORMAL', set(), 4)
+
+
+def render_probe():
+    """An equirect of the room from PROBE_POS, lit as 'room' (the screen's light is added live).
+    Lights themselves are hidden from it: their highlights come from the key-light pass.
+    Camera turned (90, 0, -90) so the image lands in three.js's equirect layout as is."""
+    lighting('room')
+    vis = [(o, o.visible_camera) for o in lights]
+    for o in lights:
+        o.visible_camera = False
+    cd = bpy.data.cameras.new('ProbeCam')
+    cd.type = 'PANO'
+    try:
+        cd.panorama_type = 'EQUIRECTANGULAR'
+    except Exception:
+        cd.cycles.panorama_type = 'EQUIRECTANGULAR'
+    pc = bpy.data.objects.new('ProbeCam', cd)
+    scene.collection.objects.link(pc)
+    pc.location = PROBE_POS
+    pc.rotation_euler = (math.radians(90), 0, math.radians(-90))
+    r = scene.render
+    prev = (scene.camera, r.resolution_x, r.resolution_y, r.resolution_percentage,
+            scene.cycles.samples, scene.cycles.use_denoising)
+    w = max(256, int(1024 * SCALE))
+    scene.camera = pc
+    r.resolution_x, r.resolution_y, r.resolution_percentage = w, w // 2, 100
+    scene.cycles.samples = max(SAMPLES // 2, 32)
+    scene.cycles.use_denoising = True
+    print(f'probe {w}x{w // 2} {scene.cycles.samples}spp', flush=True)
+    bpy.ops.render.render()
+    s = r.image_settings
+    s.file_format = 'OPEN_EXR'; s.color_depth = '16'; s.exr_codec = 'ZIP'; s.color_mode = 'RGB'
+    s.color_management = 'FOLLOW_SCENE'
+    bpy.data.images['Render Result'].save_render(os.path.join(OUT, 'probe.exr'), scene=scene)
+    (scene.camera, r.resolution_x, r.resolution_y, r.resolution_percentage,
+     scene.cycles.samples, scene.cycles.use_denoising) = prev
+    bpy.data.objects.remove(pc)
+    for o, v in vis:
+        o.visible_camera = v
+    lighting('all')
+
+
 # ---------------------------------------------------------------- bake every group
 manifest = {'groups': {}, 'objects': {}, 'exposure': scene.view_settings.exposure,
             'look': scene.view_settings.look, 'logK': LOG_K}
+render_probe()
+manifest['probe'] = {'file': 'probe.exr', 'pos': gl(PROBE_POS),
+                     'boxMin': gl(Vector((IN_MIN.x, IN_MAX.y, IN_MIN.z))),
+                     'boxMax': gl(Vector((IN_MAX.x, IN_MIN.y, IN_MAX.z)))}
+manifest['keys'] = []
+for names, radius in KEYS:
+    obs = [bpy.data.objects[n] for n in names]
+    pos = sum((o.matrix_world.translation for o in obs), Vector()) / max(len(obs), 1)
+    col = list(obs[0].data.color) if obs else [0, 0, 0]
+    manifest['keys'].append({'lights': list(names), 'pos': gl(pos), 'color': [round(c, 4) for c in col],
+                             'radius': radius})
 for g, objs in groups.items():
     size = max(256, int(ATLAS[g] * SCALE))
     entry = {}
@@ -547,6 +705,21 @@ for g, objs in groups.items():
     e = pixels(img)
     if e[..., :3].max() > 1e-3:
         entry['emit'], entry['emitScale'] = write(f'{g}_emit', e, hdr=True)
+
+    # specular inputs: normals at full size (the bump detail is what catches highlights), the
+    # rest at half, since roughness and the key lights' shadows are soft anyway
+    img = bpy.data.images.new(f'{g}_nrm', size, size, float_buffer=True)
+    bake_normals(objs, img)
+    entry['nrm'], _ = write(f'{g}_nrm', pixels(img), hdr=False, linear=True)
+
+    half_size = max(256, size // 2)
+    img = bpy.data.images.new(f'{g}_surf', half_size, half_size, float_buffer=True)
+    bake_surface(objs, img)
+    entry['surf'], _ = write(f'{g}_surf', pixels(img), hdr=False, linear=True)
+
+    img = bpy.data.images.new(f'{g}_keys', half_size, half_size, float_buffer=True)
+    print(f'{g}: key lights {half_size}px', flush=True)
+    entry['keys'], entry['keysScale'] = write(f'{g}_keys', bake_keys(objs, img), hdr=True)
 
     manifest['groups'][g] = entry
     for ob in objs:

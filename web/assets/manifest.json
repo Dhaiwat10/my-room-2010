@@ -9,12 +9,25 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.6931009292602539,
+   "lightScale": 0.6935793161392212,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.018109044060111046
+   "screenScale": 0.018126387149095535,
+   "nrm": {
+    "hi": "room_nrm_hi.jpg",
+    "lo": "room_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "room_surf_hi.jpg",
+    "lo": "room_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "room_keys_hi.jpg",
+    "lo": "room_keys_lo.jpg"
+   },
+   "keysScale": 0.7186880111694336
   },
   "desk": {
    "albedo": {
@@ -25,17 +38,30 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 3.1397457122802734,
+   "lightScale": 3.1406643390655518,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.2392626702785492,
+   "screenScale": 0.23926284909248352,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
    },
-   "emitScale": 4.0
+   "emitScale": 4.0,
+   "nrm": {
+    "hi": "desk_nrm_hi.jpg",
+    "lo": "desk_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "desk_surf_hi.jpg",
+    "lo": "desk_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "desk_keys_hi.jpg",
+    "lo": "desk_keys_lo.jpg"
+   },
+   "keysScale": 3.1512911319732666
   },
   "pc": {
    "albedo": {
@@ -51,12 +77,25 @@
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.454881191253662,
+   "screenScale": 4.450133800506592,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
    },
-   "emitScale": 6.0
+   "emitScale": 6.0,
+   "nrm": {
+    "hi": "pc_nrm_hi.jpg",
+    "lo": "pc_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "pc_surf_hi.jpg",
+    "lo": "pc_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "pc_keys_hi.jpg",
+    "lo": "pc_keys_lo.jpg"
+   },
+   "keysScale": 2.111027479171753
   },
   "far": {
    "albedo": {
@@ -67,12 +106,25 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.017432520166039467,
+   "lightScale": 0.017432497814297676,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.0054215858690440655
+   "screenScale": 0.0054215784184634686,
+   "nrm": {
+    "hi": "far_nrm_hi.jpg",
+    "lo": "far_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "far_surf_hi.jpg",
+    "lo": "far_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "far_keys_hi.jpg",
+    "lo": "far_keys_lo.jpg"
+   },
+   "keysScale": 0.001
   },
   "art": {
    "albedo": {
@@ -83,12 +135,25 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5743856430053711,
+   "lightScale": 0.5743846893310547,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.004824942443519831
+   "screenScale": 0.004824952222406864,
+   "nrm": {
+    "hi": "art_nrm_hi.jpg",
+    "lo": "art_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "art_surf_hi.jpg",
+    "lo": "art_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "art_keys_hi.jpg",
+    "lo": "art_keys_lo.jpg"
+   },
+   "keysScale": 0.5548511147499084
   }
  },
  "objects": {
@@ -124,5 +189,74 @@
  },
  "exposure": 0.18000000715255737,
  "look": "None",
- "logK": 256.0
+ "logK": 256.0,
+ "probe": {
+  "file": "probe.exr",
+  "pos": [
+   -0.2535,
+   1.035,
+   -1.05
+  ],
+  "boxMin": [
+   -4.57,
+   0.0,
+   -1.97
+  ],
+  "boxMax": [
+   1.77,
+   2.8,
+   1.97
+  ]
+ },
+ "keys": [
+  {
+   "lights": [
+    "DeskLamp_Light"
+   ],
+   "pos": [
+    0.21138,
+    1.00383,
+    -1.43247
+   ],
+   "color": [
+    1.0,
+    0.7,
+    0.42
+   ],
+   "radius": 0.03
+  },
+  {
+   "lights": [
+    "Floor_Lamp",
+    "Left_Soft"
+   ],
+   "pos": [
+    -1.325,
+    1.55,
+    -1.1
+   ],
+   "color": [
+    1.0,
+    0.72,
+    0.45
+   ],
+   "radius": 0.35
+  },
+  {
+   "lights": [
+    "Hall_Tube"
+   ],
+   "pos": [
+    2.9,
+    2.3,
+    -0.9
+   ],
+   "color": [
+    1.0,
+    0.74,
+    0.48
+   ],
+   "radius": 0.45
+  }
+ ]
 }

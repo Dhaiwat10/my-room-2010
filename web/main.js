@@ -2,6 +2,7 @@
 // sit up to and use, and speakers that play from where they are.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { RoomAudio } from './audio.js';
 
@@ -81,10 +82,59 @@ const fill = {
   fillPos: { value: new THREE.Vector3() },
   fillRadius: { value: FILL.radius },
 };
+// ------------------------------------------------------------------ specular
+// The bake holds diffuse light only; highlights and reflections move with the eye, so they're
+// added here (physically based: GGX, Smith, Schlick), from four baked inputs per group:
+//   nrm  - the surface normal, bump included        surf - roughness, metalness, dielectric F0
+//   keys - each key light's direct light on its own  and the room's reflection probe.
+//   - Reflections: the probe (an HDR panorama from over the desk), prefiltered by roughness,
+//     parallax-corrected against the room's box, and scaled by the baked light at each point
+//     over the light the probe saw (so under the desk reflects dimly, as it should).
+//   - Key lights (desk lamp, the lamps off to the left, the hall tube): their baked direct
+//     light already carries shadows and the spot's cone, so a highlight is just that times the
+//     GGX lobe toward the light, the lobe widened by the light's size.
+//   - The screen: a rectangle light, using the point on it nearest the reflected ray, times
+//     its baked glow and the live screenTint, so XP's colours slide across the desk.
+// ?spec=0 turns it all off for comparison; ?specgain= / ?envgain= scale it for tuning.
+const pbr = !!manifest.probe && Object.values(manifest.groups).every((g) => g.nrm && g.surf && g.keys)
+  && params.get('spec') !== '0';
+const spec = {};
+const pbrDefines = {};
+if (pbr) {
+  const eq = await new EXRLoader(manager).loadAsync(`assets/${manifest.probe.file}${v}`);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = pmrem.fromEquirectangular(eq).texture;
+  pmrem.dispose(); eq.dispose();
+  // what three's own materials define for a PMREM map (WebGLPrograms' generateCubeUVSize)
+  const h = env.image.height, maxMip = Math.log2(h) - 2;
+  // look-dev: ?spec=only shows just the specular; env / keys / screen show one term of it
+  const view = { only: 1, env: 2, keys: 3, screen: 4, keymap: 5, lightmap: 6 }[params.get('spec')];
+  if (view) pbrDefines.SPEC_VIEW = view;
+  Object.assign(pbrDefines, { PBR: 1, ENVMAP_TYPE_CUBE_UV: 1, CUBEUV_TEXEL_HEIGHT: 1 / h,
+    CUBEUV_TEXEL_WIDTH: 1 / (3 * Math.max(Math.pow(2, maxMip), 7 * 16)), CUBEUV_MAX_MIP: maxMip.toFixed(1) });
+  const vec = (a) => new THREE.Vector3(...a);
+  const keys = manifest.keys;
+  Object.assign(spec, {
+    envMap: { value: env },
+    probePos: { value: vec(manifest.probe.pos) },
+    boxMin: { value: vec(manifest.probe.boxMin) },
+    boxMax: { value: vec(manifest.probe.boxMax) },
+    keyPos: { value: keys.map((k) => vec(k.pos)) },
+    keyColor: { value: keys.map((k) => vec(k.color)) },
+    keyRadius: { value: keys.map((k) => k.radius) },
+    scrCenter: { value: new THREE.Vector3() },       // set once the screen is found, below
+    scrRight: { value: new THREE.Vector3(1e-3, 0, 0) },
+    scrUp: { value: new THREE.Vector3(0, 1e-3, 0) },
+    scrNormal: { value: new THREE.Vector3(0, 0, 1) },
+    specGain: { value: +(params.get('specgain') ?? 1) },
+    envGain: { value: +(params.get('envgain') ?? 1) },
+  });
+}
+
 const materials = {};
 for (const [group, g] of Object.entries(manifest.groups)) {
   materials[group] = new THREE.ShaderMaterial({
-    defines: { ...(logK ? { LOG_LIGHT: 1 } : {}), ...(punchy ? { AGX_PUNCHY: 1 } : { AGX_MOOD: 1 }) },
+    defines: { ...(logK ? { LOG_LIGHT: 1 } : {}), ...(punchy ? { AGX_PUNCHY: 1 } : { AGX_MOOD: 1 }), ...pbrDefines },
     uniforms: {
       albedo: { value: tex(g.albedo) },
       light: { value: tex(g.light, !!logK) },
@@ -93,6 +143,13 @@ for (const [group, g] of Object.entries(manifest.groups)) {
       lightScale: { value: g.lightScale },
       emitScale: { value: g.emitScale ?? 0 },
       screenScale: { value: g.screenScale ?? 0 },
+      ...(pbr ? {
+        nrm: { value: tex(g.nrm, true) },
+        surf: { value: tex(g.surf, true) },
+        keys: { value: tex(g.keys, true) },
+        keysScale: { value: g.keysScale },
+        ...spec,
+      } : {}),
       screenTint,
       ...fill,
       alpha: { value: 1 },
@@ -102,18 +159,23 @@ for (const [group, g] of Object.entries(manifest.groups)) {
     vertexShader: /* glsl */`
       varying vec2 vUv;
       varying vec3 vWorld;
+      varying vec3 vM0, vM1, vM2;     // the object's rotation, to bring its baked normals to world
       void main() {
         vUv = uv;
         vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+        vM0 = modelMatrix[0].xyz; vM1 = modelMatrix[1].xyz; vM2 = modelMatrix[2].xyz;
         gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
       }`,
     fragmentShader: /* glsl */`
+      #include <common>
+      #include <cube_uv_reflection_fragment>
       uniform sampler2D albedo, light, emit, screen;
       uniform float lightScale, emitScale, screenScale, logK, time, alpha;
       uniform vec3 screenTint, fillColor, fillPos;
       uniform float fillRadius;
       varying vec2 vUv;
       varying vec3 vWorld;
+      varying vec3 vM0, vM1, vM2;
       vec3 hdr(sampler2D t, float scale) {
         vec3 e = texture2D(t, vUv).rgb;
         #ifdef LOG_LIGHT
@@ -122,11 +184,92 @@ for (const [group, g] of Object.entries(manifest.groups)) {
           return e * scale;
         #endif
       }
+      #ifdef PBR
+      uniform sampler2D nrm, surf, keys, envMap;
+      uniform float keysScale, specGain, envGain;
+      uniform vec3 probePos, boxMin, boxMax;
+      uniform vec3 keyPos[3], keyColor[3];
+      uniform float keyRadius[3];
+      uniform vec3 scrCenter, scrRight, scrUp, scrNormal;
+      float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+      // GGX lobe without the cosine (the baked irradiance already has it): D * Vis * F
+      vec3 lobe(vec3 N, vec3 V, vec3 L, float a, vec3 f0) {
+        float NoL = dot(N, L);
+        if (NoL <= 0.0) return vec3(0.0);
+        vec3 H = normalize(V + L);
+        float NoV = max(dot(N, V), 1e-3), NoH = saturate(dot(N, H)), VoH = saturate(dot(V, H));
+        float a2 = a * a, d = NoH * NoH * (a2 - 1.0) + 1.0;
+        float D = a2 / (PI * d * d);
+        float gv = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2), gl = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
+        float Vis = 0.5 / max(gv + gl, 1e-5);
+        return D * Vis * (f0 + (1.0 - f0) * pow(1.0 - VoH, 5.0));
+      }
+      // Karis' fit of the split-sum environment BRDF
+      vec3 envBRDF(vec3 f0, float r, float NoV) {
+        vec4 q = r * vec4(-1.0, -0.0275, -0.572, 0.022) + vec4(1.0, 0.0425, 1.04, -0.04);
+        float a004 = min(q.x * q.x, exp2(-9.28 * NoV)) * q.x + q.y;
+        vec2 AB = vec2(-1.04, 1.04) * a004 + q.zw;
+        return f0 * AB.x + AB.y;
+      }
+      vec3 boxProject(vec3 P, vec3 R) {
+        vec3 tf = max((boxMax - P) / R, (boxMin - P) / R);
+        return normalize(P + R * min(min(tf.x, tf.y), tf.z) - probePos);
+      }
+      #endif
       void main() {
-        vec3 L = hdr(light, lightScale) + hdr(screen, screenScale) * screenTint;
+        vec3 base = texture2D(albedo, vUv).rgb;
+        vec3 Lroom = hdr(light, lightScale);
+        vec3 Lscr = hdr(screen, screenScale) * screenTint;
         float fd = distance(vWorld, fillPos) / fillRadius;
-        L += fillColor / (1.0 + fd * fd);
-        vec3 c = texture2D(albedo, vUv).rgb * L + hdr(emit, emitScale);
+        vec3 Lfill = fillColor / (1.0 + fd * fd);
+        vec3 c;
+        #ifdef PBR
+          vec3 sf = texture2D(surf, vUv).rgb;
+          float rough = clamp(sf.r, 0.045, 1.0), metal = sf.g, a = rough * rough;
+          vec3 f0 = mix(vec3(sf.b * 0.08), base, metal);
+          vec3 n = texture2D(nrm, vUv).rgb * 2.0 - 1.0;
+          vec3 N = normalize(vM0 * n.x + vM1 * n.y + vM2 * n.z);
+          vec3 V = normalize(cameraPosition - vWorld);
+          float NoV = max(dot(N, V), 1e-3);
+          vec3 P = vWorld;
+
+          // reflections, dimmed where the bake says the probe's light doesn't reach
+          vec3 R = reflect(-V, N);
+          vec3 env = textureCubeUV(envMap, boxProject(P, R), rough).rgb;
+          float seen = lum(textureCubeUV(envMap, N, 1.0).rgb);
+          env *= clamp(lum(Lroom) / max(seen, 1e-4), 0.0, 1.5) * envGain;
+          vec3 S = env * envBRDF(f0, rough, NoV);
+          vec3 Senv = S;
+
+          // the key lights: baked direct light x the lobe toward each, widened by its size
+          vec3 E = hdr(keys, keysScale) * PI;
+          for (int i = 0; i < 3; i++) {
+            vec3 toL = keyPos[i] - P;
+            float dist = length(toL);
+            float aw = min(1.0, a + keyRadius[i] / (2.0 * dist));
+            S += lobe(N, V, toL / dist, aw, f0) * E[i] * keyColor[i];
+          }
+
+          vec3 Skeys = S - Senv;
+          // the screen: nearest point on its rectangle to the reflected ray
+          float dn = dot(R, scrNormal);
+          float t = dot(scrCenter - P, scrNormal) / (abs(dn) > 1e-4 ? dn : 1e-4);
+          vec3 q = t > 0.0 ? P + R * t : P - scrNormal * dot(P - scrCenter, scrNormal);
+          float hx = length(scrRight), hy = length(scrUp);
+          vec3 ex = scrRight / hx, ey = scrUp / hy, d = q - scrCenter;
+          q = scrCenter + ex * clamp(dot(d, ex), -hx, hx) + ey * clamp(dot(d, ey), -hy, hy);
+          vec3 toS = q - P;
+          float ds = length(toS);
+          float norm = (a / min(1.0, a + hx / (2.0 * ds))) * (a / min(1.0, a + hy / (2.0 * ds)));
+          S += lobe(N, V, toS / ds, a, f0) * norm * Lscr * PI;
+
+          c = base * (1.0 - metal) * (Lroom + Lscr + Lfill) + S * specGain + hdr(emit, emitScale);
+          #ifdef SPEC_VIEW
+            c = (SPEC_VIEW == 1 ? S : SPEC_VIEW == 2 ? Senv : SPEC_VIEW == 3 ? Skeys : SPEC_VIEW == 4 ? S - Senv - Skeys : SPEC_VIEW == 5 ? E / PI : Lroom) * specGain;
+          #endif
+        #else
+          c = base * (Lroom + Lscr + Lfill) + hdr(emit, emitScale);
+        #endif
         gl_FragColor = vec4(c, alpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -171,10 +314,7 @@ if (FAN_RUNNING && fanHead && named.Fan_Blades) {
   const make = (alpha) => {
     const ghost = blades.clone();
     ghost.material = blades.material.clone();
-    ghost.material.uniforms = THREE.UniformsUtils.clone(blades.material.uniforms);
-    for (const k of ['albedo', 'light', 'emit', 'screen']) ghost.material.uniforms[k].value = blades.material.uniforms[k].value;
-    ghost.material.uniforms.screenTint = screenTint;
-    ghost.material.uniforms.alpha.value = alpha;
+    ghost.material.uniforms = { ...blades.material.uniforms, alpha: { value: alpha } };
     ghost.material.transparent = true;
     ghost.material.depthWrite = false;
     fanHead.add(ghost);
@@ -352,6 +492,11 @@ const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(sSize.x, sSize.y),
   new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
 screenMesh.position.copy(sCenter);
 screenMesh.name = 'Screen';
+if (pbr) {
+  spec.scrCenter.value.copy(screenBox.getCenter(new THREE.Vector3()));
+  spec.scrRight.value.set(sSize.x / 2, 0, 0);
+  spec.scrUp.value.set(0, sSize.y / 2, 0);
+}
 scene.add(screenMesh);
 
 const SCREEN_W = 1024, SCREEN_H = 640;          // the PC's resolution, in CSS px

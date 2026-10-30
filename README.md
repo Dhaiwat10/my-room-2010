@@ -7,7 +7,10 @@ Windows XP machine on the monitor, and its sound coming out of the desk speakers
 
 - `room.blend` — the scene. Lighting is authored here.
 - `tools/bake.py` — bakes lighting into textures and exports `web/assets/` (headless Blender).
-- `web/` — the site: `main.js` (scene, camera, screen glow), `audio.js` (3D speakers, fans).
+  Besides the diffuse light it bakes normals, roughness/metalness, each key light on its own and a
+  reflection probe, so the browser can add highlights and reflections.
+- `web/` — the site: `main.js` (scene, camera, screen glow, specular), `audio.js` (3D speakers, fans).
+  Look-dev flags: `?spec=0` (no specular), `?spec=only|env|keys|screen`, `?specgain=`, `?envgain=`.
 - `pc/` — the XP machine (React + Vite), built into `web/pc/`.
 - `art/` — posters, photos and repainted textures used in the scene.
 
