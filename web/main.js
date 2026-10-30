@@ -146,48 +146,69 @@ gltf.scene.traverse((o) => {
 });
 
 // ------------------------------------------------------------------ the pedestal fan
-// The Havells fan on the left is running, and its head sweeps slowly side to side the way
-// these fans do, about 70 degrees end to end every ~14 s, easing at each end.
-// A real fan does ~20 turns a second, which a 60 Hz screen can't show (three blades, a third
-// of a turn per frame: it would look parked), so the blades turn at a speed the eye reads as
-// fast, with a few fading copies trailing behind them as motion blur.
+// The Havells fan on the left, running, pointed at the chair.
+//
+// Why it isn't simply rotated smoothly: a real pedestal fan turns at ~1200 rpm, 20 turns a
+// second, far too fast for the eye to follow any blade. What you actually see (and what a
+// camera records) is
+//   - motion blur: each blade smeared into a translucent fan of grey, covering most of the gap
+//     to the next blade, so the head reads as a hazy disc rather than three paddles;
+//   - aliasing: sampled at the screen's refresh rate, the blur pattern appears to creep slowly
+//     forwards or backwards (the wagon-wheel effect) instead of spinning at its true speed;
+//   - unsteadiness: a cheap induction motor's speed wanders by a percent or two with the mains
+//     and the load, so that creep drifts, stalls and reverses, and the head shivers faintly.
+// So the blades really turn at ~20 rps (integrated from a slowly wandering speed), and each
+// frame draws them smeared across the angle they sweep while an imaginary shutter is open.
 const FAN_RUNNING = true;
-const FAN_SPEED = 2.6 * Math.PI * 2;          // blade turns, radians a second
-const SWEEP = 0;                              // fixed, pointing at the chair (was 35° each way)
-const SWEEP_PERIOD = 14;                      // seconds for a full left-right-left
+const FAN_RPS = 19.6;                          // ~1180 rpm
+const SHUTTER = 1 / 110;                       // seconds of motion each frame smears together
+const BLUR = 12;                               // copies drawn across that smear
 const fanHead = named.Fan_Head;
 const fanBlur = [];
 if (FAN_RUNNING && fanHead && named.Fan_Blades) {
   const blades = named.Fan_Blades;
-  fanHead.attach(blades);                     // blades ride on the head as it turns
-  const BLUR = 5, STEP = 0.07;                // copies, and the angle between them
-  for (let i = 1; i <= BLUR; i++) {
+  fanHead.attach(blades);
+  const make = (alpha) => {
     const ghost = blades.clone();
     ghost.material = blades.material.clone();
     ghost.material.uniforms = THREE.UniformsUtils.clone(blades.material.uniforms);
     for (const k of ['albedo', 'light', 'emit', 'screen']) ghost.material.uniforms[k].value = blades.material.uniforms[k].value;
     ghost.material.uniforms.screenTint = screenTint;
-    ghost.material.uniforms.alpha.value = 0.32 * (1 - i / (BLUR + 1));
+    ghost.material.uniforms.alpha.value = alpha;
     ghost.material.transparent = true;
     ghost.material.depthWrite = false;
     fanHead.add(ghost);
-    fanBlur.push({ mesh: ghost, lag: i * STEP });
+    return ghost;
+  };
+  // the smear is densest in the middle of the exposure and thins at both ends
+  for (let i = 0; i < BLUR; i++) {
+    const f = i / (BLUR - 1);
+    fanBlur.push({ mesh: make(0.34 * Math.sin(Math.PI * (0.15 + 0.7 * f))), frac: f });
   }
-  fanBlur.unshift({ mesh: blades, lag: 0 });
-  for (const b of fanBlur) b.base = b.mesh.quaternion.clone();
+  blades.visible = false;
+  for (const b of fanBlur) b.base = blades.quaternion.clone();
 }
 const headBase = fanHead ? fanHead.quaternion.clone() : null;
 const FAN_AXIS = new THREE.Vector3(0, 0, -1);  // Blender's local y (the fan's axis) is glTF's local -z
-const UP = new THREE.Vector3(0, 1, 0);         // the swivel turns about the vertical
-const spinQ = new THREE.Quaternion(), sweepQ = new THREE.Quaternion();
+const SHAKE_X = new THREE.Vector3(1, 0, 0), SHAKE_Y = new THREE.Vector3(0, 1, 0);
+const spinQ = new THREE.Quaternion(), shakeQ = new THREE.Quaternion(), shakeQ2 = new THREE.Quaternion();
+let fanAngle = 0, fanLast = 0;
 function runFan(t) {
   if (!fanBlur.length) return;
-  sweepQ.setFromAxisAngle(UP, SWEEP * Math.sin((t / SWEEP_PERIOD) * Math.PI * 2));
-  fanHead.quaternion.copy(sweepQ).multiply(headBase);
+  const dt = Math.min(t - fanLast, 0.1); fanLast = t;
+  // the motor's speed wanders a little: slow mains/load drift plus a faint faster wobble
+  const rps = FAN_RPS * (1 + 0.012 * Math.sin(t * 0.37) + 0.006 * Math.sin(t * 1.9 + 1.3) + 0.003 * Math.sin(t * 5.3));
+  const w = rps * Math.PI * 2;
+  fanAngle = (fanAngle + w * dt) % (Math.PI * 2);
+  const sweep = w * SHUTTER;                   // angle swept while the shutter is open
   for (const b of fanBlur) {
-    spinQ.setFromAxisAngle(FAN_AXIS, t * FAN_SPEED - b.lag);
+    spinQ.setFromAxisAngle(FAN_AXIS, fanAngle - sweep * b.frac);
     b.mesh.quaternion.copy(b.base).multiply(spinQ);
   }
+  // the whole head shivers very slightly at the blade rate: the slightly unbalanced rotor
+  const shiver = 0.0009 * Math.sin(fanAngle * 3), nod = 0.0006 * Math.sin(fanAngle * 3 + 1.1);
+  shakeQ.setFromAxisAngle(SHAKE_Y, shiver); shakeQ2.setFromAxisAngle(SHAKE_X, nod);
+  fanHead.quaternion.copy(headBase).multiply(shakeQ).multiply(shakeQ2);
 }
 
 // ------------------------------------------------------------------ the Ajanta clock
