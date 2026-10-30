@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { ControlPanel } from "./apps/control-panel";
 import { Cricket } from "./apps/cricket";
+import { AutoRun } from "./apps/autorun";
 import { Firefox } from "./apps/firefox";
 import { MovieMaker } from "./apps/movie-maker";
 import { MyComputer } from "./apps/my-computer";
@@ -16,6 +17,7 @@ import {
   AgeOfEmpiresIcon,
   BrianLaraIcon,
   ComputerIcon,
+  CdDriveIcon,
   ControlPanelIcon,
   CounterStrikeIcon,
   CricketIcon,
@@ -113,6 +115,7 @@ export const APPS = {
   lara: game("Brian Lara Cricket 2005", "Brian Lara International Cricket 2005", BrianLaraIcon, "lara", "C:\\Program Files\\Codemasters\\Brian Lara International Cricket 2005\\BLIC2005.exe"),
   aoe: game("Age of Empires III", "Age of Empires III", AgeOfEmpiresIcon, "aoe", "C:\\Program Files\\Microsoft Games\\Age of Empires III\\age3.exe"),
   rct: game("RollerCoaster Tycoon 3", "RollerCoaster Tycoon 3", RollerCoasterIcon, "rct", "C:\\Program Files\\Atari\\RollerCoaster Tycoon 3\\RCT3.exe"),
+  autorun: { label: "AutoPlay", title: "AutoRun", icon: CdDriveIcon, size: { w: 460, h: 290 }, menu: false, desktop: false, component: AutoRun },
   recycle: { label: "Recycle Bin", title: "Recycle Bin", icon: RecycleBinIcon, size: { w: 600, h: 380 }, big: true, menu: false, component: RecycleBin },
   controlpanel: {
     label: "Control Panel",

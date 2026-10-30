@@ -972,3 +972,10 @@
   .wmm-top { flex-direction: column; }
   .wmm-preview { width: auto; max-width: none; }
 }
+
+/* a game disc's AutoRun menu: the disc art beside a column of big buttons */
+.xp-autorun { flex-direction: row; align-items: center; gap: 16px; padding: 14px; background: #101010; color: #eee; }
+.xp-autorun-art { width: 220px; height: 220px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px #333, 0 6px 18px rgba(0, 0, 0, 0.6); }
+.xp-autorun-side { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.xp-autorun-side h3 { margin: 0 0 8px; font-size: 13px; line-height: 1.3; color: #fff; }
+.xp-autorun-side button { min-height: 28px; font-weight: bold; }

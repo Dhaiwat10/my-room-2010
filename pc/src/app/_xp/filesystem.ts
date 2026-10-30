@@ -5,7 +5,6 @@ import type { Msg } from "./apps/msgbox";
 import {
   CdDriveIcon,
   ComputerIcon,
-  CricketIcon,
   FloppyIcon,
   FolderIcon,
   HardDiskIcon,
@@ -224,19 +223,28 @@ function cdDrive(): FsNode {
       msg: { title: "Insert Disk", text: "Please insert a disk into drive F:.", kind: "warning" },
     });
   }
-  const { label, app } = DISCS[disc];
-  return folder(
-    `${label} (F:)`,
-    [
-      folder("Data", [], { msg: cantOpen("Data", "Access is denied.") }),
-      folder("DirectX", [], {}),
-      file("autorun.inf", { note: "Setup Information", size: "1 KB", msg: { title: "autorun.inf", text: "Better not touch that.", kind: "warning" } }),
-      file("autorun.exe", { icon: CricketIcon, note: "Application", size: "1,812 KB", open: app }),
-      file("Cricket07.ico", { note: "Icon", size: "25 KB" }),
-      file("readme.txt", { note: "Text Document", size: "18 KB", msg: cantOpen("readme.txt", "Nobody has ever read this file.") }),
-    ],
-    { kind: "drive", icon: CricketIcon, note: "CD Drive", group: "Devices with Removable Storage" },
-  );
+  const { label, game } = DISCS[disc];
+  const icon = APPS[game].icon;
+  const files =
+    disc === "cricket07"
+      ? [
+          folder("Data", [], { msg: cantOpen("Data", "Access is denied.") }),
+          folder("DirectX", [], {}),
+          file("autorun.inf", { note: "Setup Information", size: "1 KB", msg: { title: "autorun.inf", text: "Better not touch that.", kind: "warning" } }),
+          file("autorun.exe", { icon, note: "Application", size: "1,812 KB", open: game }),
+          file("Cricket07.ico", { note: "Icon", size: "25 KB" }),
+          file("readme.txt", { note: "Text Document", size: "18 KB", msg: cantOpen("readme.txt", "Nobody has ever read this file.") }),
+        ]
+      : [
+          folder("Data", [], { msg: cantOpen("Data", "Access is denied.") }),
+          folder("DirectX", [], {}),
+          folder("Support", [], {}),
+          file("autorun.inf", { note: "Setup Information", size: "1 KB", msg: { title: "autorun.inf", text: "Better not touch that.", kind: "warning" } }),
+          file("AutoRun.exe", { icon, note: "Application", size: "1,204 KB", open: game }),
+          file("Setup.exe", { icon, note: "Application", size: "468 KB", open: game }),
+          file("Readme.txt", { note: "Text Document", size: "24 KB", msg: cantOpen("Readme.txt", "Nobody has ever read this file.") }),
+        ];
+  return folder(`${label} (F:)`, files, { kind: "drive", icon, note: "CD Drive", group: "Devices with Removable Storage" });
 }
 
 export function iconFor(node: FsNode): Icon | null {

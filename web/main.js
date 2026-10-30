@@ -667,7 +667,21 @@ function updateDial() {
 // up and XP's AutoPlay starts it; ejecting one takes it away from XP straight away.
 // The tray, its bed and the disc are baked closed, inside the drive, so out here they get
 // plain materials of their own rather than the (dark) light baked in there.
-const DISCS = { cricket07: { label: 'Cricket 07', tex: 'assets/disc_cricket07.jpg' } };
+const DISCS = {
+  cricket07: { label: 'Cricket 07' },
+  sanandreas: { label: 'GTA San Andreas' },
+  vicecity: { label: 'GTA Vice City' },
+  lara: { label: 'Brian Lara Cricket 2005' },
+  aoe: { label: 'Age of Empires III' },
+};
+const discTex = {};   // each label, loaded the first time its disc goes in the tray
+function labelFor(id) {
+  if (!discTex[id]) {
+    const t = discTex[id] = new THREE.TextureLoader().load(`assets/disc_${id}.jpg`);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  }
+  return discTex[id];
+}
 const TRAY_TRAVEL = 0.135;                      // how far the tray comes out, metres
 const drive = (() => {
   const tray = named.PC_Drive_Tray, bed = named.PC_Drive_Bed, disc = named.PC_Disc;
@@ -702,9 +716,7 @@ const drive = (() => {
     uv[i * 2] = (x * ca - y * sa) / R / 2 + 0.5; uv[i * 2 + 1] = (x * sa + y * ca) / R / 2 + 0.5;
   }
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  const tex = new THREE.TextureLoader().load(DISCS.cricket07.tex);
-  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-  disc.material = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(0.27, 0.255, 0.235), transparent: true });
+  disc.material = new THREE.MeshBasicMaterial({ map: labelFor('cricket07'), color: new THREE.Color(0.27, 0.255, 0.235), transparent: true });
   const parts = [tray, bed, disc].map((o) => ({ o, z: o.position.z }));
   // a finger-sized target over the drive's face, for when you're down at the tower
   const face = new THREE.Box3().setFromObject(tray);
@@ -725,11 +737,12 @@ function updateShelf() {
   if (shelf.dataset.built) return;
   shelf.dataset.built = '1';
   shelf.innerHTML = Object.entries(DISCS).map(([id, d]) =>
-    `<button data-disc="${id}"><img src="${d.tex}" alt=""><span>${d.label}</span></button>`).join('');
+    `<button data-disc="${id}"><img src="assets/disc_${id}.jpg" alt=""><span>${d.label}</span></button>`).join('');
 }
 shelf.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b || !drive || drive.has || drive.state !== 'open') return;
   drive.has = b.dataset.disc;
+  drive.disc.material.map = labelFor(drive.has);
   drive.lift = 1; drive.liftTarget = 0;           // it drops into the tray
   drive.disc.visible = true;
   audio.drive('clunk');

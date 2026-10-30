@@ -153,7 +153,7 @@ function Desktop({ onTurnOff }: { onTurnOff: () => void }) {
     let spinUp = 0;
     const offDisc = onDisc((d) => {
       clearTimeout(spinUp);
-      if (d) spinUp = window.setTimeout(() => openRef.current(DISCS[d].app), 3200);
+      if (d) spinUp = window.setTimeout(() => openRef.current(DISCS[d].game), 3200);
     });
     return () => {
       removeEventListener("message", onMessage);
