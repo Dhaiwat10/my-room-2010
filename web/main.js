@@ -697,6 +697,23 @@ const unlock = () => void audio.unlock();
 const listenForGesture = (target) => ['pointerdown', 'keydown'].forEach((ev) =>
   target.addEventListener(ev, unlock, { capture: true }));
 listenForGesture(window);
+
+// mute, remembered between visits; M toggles it too
+const muteBtn = document.getElementById('mute');
+let muted = false;
+try { muted = localStorage.getItem('muted') === '1'; } catch { /* storage blocked */ }
+const setMuted = (m) => {
+  muted = m;
+  audio.setMuted(m);
+  muteBtn.classList.toggle('off', m);
+  muteBtn.setAttribute('aria-label', m ? 'Unmute' : 'Mute');
+  try { localStorage.setItem('muted', m ? '1' : '0'); } catch { /* storage blocked */ }
+};
+setMuted(muted);
+muteBtn.addEventListener('click', () => setMuted(!muted));
+window.addEventListener('keydown', (e) => {
+  if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMuted(!muted);
+});
 const hookPc = () => {
   try { listenForGesture(iframe.contentWindow); } catch { /* not loaded yet */ }
   takeStreams();

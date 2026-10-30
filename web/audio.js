@@ -248,6 +248,13 @@ export class RoomAudio {
     if (this.pedestal && !this.pedestal.isPlaying) this.pedestal.play();
   }
 
+  // the mute button: fades the whole room in or out, so nothing pops
+  setMuted(muted) {
+    const g = this.listener.gain.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(muted ? 0 : 1, t + 0.15);
+  }
+
   toggleFan() {
     if (!this.fan) return;
     if (this.fan.isPlaying) this.fan.stop(); else this.fan.play();
