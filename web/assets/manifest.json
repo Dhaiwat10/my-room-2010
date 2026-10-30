@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.6935793161392212,
+   "lightScale": 0.69424968957901,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.018126387149095535,
+   "screenScale": 0.01713637076318264,
    "nrm": {
     "hi": "room_nrm_hi.jpg",
     "lo": "room_nrm_lo.jpg"
@@ -27,7 +27,84 @@
     "hi": "room_keys_hi.jpg",
     "lo": "room_keys_lo.jpg"
    },
-   "keysScale": 0.7186880111694336
+   "keysScale": 0.7186889052391052,
+   "albedoKtx2": {
+    "hi": "room_albedo_hi.ktx2",
+    "lo": "room_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "room_light_hi.ktx2",
+    "lo": "room_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "room_screen_hi.ktx2",
+    "lo": "room_screen_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "room_nrm_hi.ktx2",
+    "lo": "room_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "room_surf_hi.ktx2",
+    "lo": "room_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "room_keys_hi.ktx2",
+    "lo": "room_keys_lo.ktx2"
+   }
+  },
+  "desktop": {
+   "albedo": {
+    "hi": "desktop_albedo_hi.jpg",
+    "lo": "desktop_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "desktop_light_hi.jpg",
+    "lo": "desktop_light_lo.jpg"
+   },
+   "lightScale": 3.819765329360962,
+   "screen": {
+    "hi": "desktop_screen_hi.jpg",
+    "lo": "desktop_screen_lo.jpg"
+   },
+   "screenScale": 0.2337619960308075,
+   "nrm": {
+    "hi": "desktop_nrm_hi.jpg",
+    "lo": "desktop_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "desktop_surf_hi.jpg",
+    "lo": "desktop_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "desktop_keys_hi.jpg",
+    "lo": "desktop_keys_lo.jpg"
+   },
+   "keysScale": 4.038732528686523,
+   "albedoKtx2": {
+    "hi": "desktop_albedo_hi.ktx2",
+    "lo": "desktop_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "desktop_light_hi.ktx2",
+    "lo": "desktop_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "desktop_screen_hi.ktx2",
+    "lo": "desktop_screen_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "desktop_nrm_hi.ktx2",
+    "lo": "desktop_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "desktop_surf_hi.ktx2",
+    "lo": "desktop_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "desktop_keys_hi.ktx2",
+    "lo": "desktop_keys_lo.ktx2"
+   }
   },
   "desk": {
    "albedo": {
@@ -38,12 +115,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 3.1406643390655518,
+   "lightScale": 1.391480565071106,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.23926284909248352,
+   "screenScale": 0.03223138675093651,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -61,7 +138,35 @@
     "hi": "desk_keys_hi.jpg",
     "lo": "desk_keys_lo.jpg"
    },
-   "keysScale": 3.1512911319732666
+   "keysScale": 0.914331316947937,
+   "albedoKtx2": {
+    "hi": "desk_albedo_hi.ktx2",
+    "lo": "desk_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "desk_light_hi.ktx2",
+    "lo": "desk_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "desk_screen_hi.ktx2",
+    "lo": "desk_screen_lo.ktx2"
+   },
+   "emitKtx2": {
+    "hi": "desk_emit_hi.ktx2",
+    "lo": "desk_emit_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "desk_nrm_hi.ktx2",
+    "lo": "desk_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "desk_surf_hi.ktx2",
+    "lo": "desk_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "desk_keys_hi.ktx2",
+    "lo": "desk_keys_lo.ktx2"
+   }
   },
   "pc": {
    "albedo": {
@@ -72,12 +177,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.178309202194214,
+   "lightScale": 2.2049672603607178,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.450133800506592,
+   "screenScale": 4.434014320373535,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -95,7 +200,35 @@
     "hi": "pc_keys_hi.jpg",
     "lo": "pc_keys_lo.jpg"
    },
-   "keysScale": 2.111027479171753
+   "keysScale": 2.1127676963806152,
+   "albedoKtx2": {
+    "hi": "pc_albedo_hi.ktx2",
+    "lo": "pc_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "pc_light_hi.ktx2",
+    "lo": "pc_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "pc_screen_hi.ktx2",
+    "lo": "pc_screen_lo.ktx2"
+   },
+   "emitKtx2": {
+    "hi": "pc_emit_hi.ktx2",
+    "lo": "pc_emit_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "pc_nrm_hi.ktx2",
+    "lo": "pc_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "pc_surf_hi.ktx2",
+    "lo": "pc_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "pc_keys_hi.ktx2",
+    "lo": "pc_keys_lo.ktx2"
+   }
   },
   "far": {
    "albedo": {
@@ -106,12 +239,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.017432497814297676,
+   "lightScale": 0.017678873613476753,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.0054215784184634686,
+   "screenScale": 0.00508385244756937,
    "nrm": {
     "hi": "far_nrm_hi.jpg",
     "lo": "far_nrm_lo.jpg"
@@ -124,7 +257,31 @@
     "hi": "far_keys_hi.jpg",
     "lo": "far_keys_lo.jpg"
    },
-   "keysScale": 0.001
+   "keysScale": 0.001,
+   "albedoKtx2": {
+    "hi": "far_albedo_hi.ktx2",
+    "lo": "far_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "far_light_hi.ktx2",
+    "lo": "far_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "far_screen_hi.ktx2",
+    "lo": "far_screen_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "far_nrm_hi.ktx2",
+    "lo": "far_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "far_surf_hi.ktx2",
+    "lo": "far_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "far_keys_hi.ktx2",
+    "lo": "far_keys_lo.ktx2"
+   }
   },
   "art": {
    "albedo": {
@@ -135,12 +292,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5743846893310547,
+   "lightScale": 0.5736567378044128,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.004824952222406864,
+   "screenScale": 0.004552088677883148,
    "nrm": {
     "hi": "art_nrm_hi.jpg",
     "lo": "art_nrm_lo.jpg"
@@ -153,11 +310,36 @@
     "hi": "art_keys_hi.jpg",
     "lo": "art_keys_lo.jpg"
    },
-   "keysScale": 0.5548511147499084
+   "keysScale": 0.5548502802848816,
+   "albedoKtx2": {
+    "hi": "art_albedo_hi.ktx2",
+    "lo": "art_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "art_light_hi.ktx2",
+    "lo": "art_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "art_screen_hi.ktx2",
+    "lo": "art_screen_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "art_nrm_hi.ktx2",
+    "lo": "art_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "art_surf_hi.ktx2",
+    "lo": "art_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "art_keys_hi.ktx2",
+    "lo": "art_keys_lo.ktx2"
+   }
   }
  },
  "objects": {
   "G_room": "room",
+  "G_desktop": "desktop",
   "G_desk": "desk",
   "Fan_Blades": "desk",
   "Fan_Head": "desk",
