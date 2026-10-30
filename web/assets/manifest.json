@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.7298556566238403,
+   "lightScale": 0.7300572991371155,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.018164198845624924
+   "screenScale": 0.01811129041016102
   },
   "desk": {
    "albedo": {
@@ -25,12 +25,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 2.7481913566589355,
+   "lightScale": 2.7492144107818604,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.22878064215183258,
+   "screenScale": 0.2296580970287323,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -46,12 +46,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.293797731399536,
+   "lightScale": 2.4072184562683105,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.462029933929443,
+   "screenScale": 4.446903705596924,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -67,12 +67,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.023128613829612732,
+   "lightScale": 0.023149708285927773,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005770480260252953
+   "screenScale": 0.005772365257143974
   },
   "art": {
    "albedo": {
@@ -83,12 +83,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5690133571624756,
+   "lightScale": 0.5675134062767029,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.006361437030136585
+   "screenScale": 0.006442910060286522
   }
  },
  "objects": {
@@ -97,13 +97,13 @@
   "Fan_Blades": "desk",
   "Fan_Head": "desk",
   "Tower": "pc",
-  "Speaker_L": "pc",
-  "Speaker_R": "pc",
   "Modem": "pc",
   "G_pc": "pc",
   "Monitor": "pc",
   "Keyboard": "pc",
   "Mouse": "pc",
+  "Speaker_L": "pc",
+  "Speaker_R": "pc",
   "G_far": "far",
   "Clock_Hand_Hour": "art",
   "Clock_Hand_Minute": "art",
