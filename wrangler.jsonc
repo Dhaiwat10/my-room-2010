@@ -4,6 +4,9 @@
   "compatibility_date": "2026-10-01",
   // The site is static: the room (web/) with the XP machine built into web/pc.
   // Headers (cross-origin isolation for Cricket 07, caching) live in web/_headers.
+  // home.dhaiwat.com moved here from the old home-dhaiwat worker.
+  "workers_dev": true,
+  "routes": [{ "pattern": "home.dhaiwat.com", "custom_domain": true }],
   "assets": {
     "directory": "./web",
     "html_handling": "auto-trailing-slash"
