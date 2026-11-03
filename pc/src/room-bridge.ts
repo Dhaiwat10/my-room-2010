@@ -6,9 +6,10 @@
 //
 // Control: the room can turn the machine on and start/stop the music when you tap a speaker.
 //
-// Light: the room asks for a tiny snapshot of the screen a few times a second and uses it to
-// colour the monitor's glow on the desk and its reflection in the laminate.
-import { domToCanvas } from "modern-screenshot";
+// Light: the room asks for a tiny snapshot of the screen and uses it to colour the monitor's
+// glow on the desk and its reflection in the laminate. A snapshot costs the page a few frames,
+// so the room only asks when screenVersion() says the screen has changed.
+import { createContext, destroyContext, domToCanvas, type Context } from "modern-screenshot";
 
 type Tapped = AudioContext & { __tap?: MediaStreamAudioDestinationNode };
 type Win = Window & { __pcStreams?: MediaStream[]; __webamp?: WebampLike; __playOnOpen?: boolean };
@@ -55,8 +56,10 @@ export function installAudioTap() {
 
 // A thumbnail of the whole screen (about 96 px wide). Fonts aren't embedded, only one
 // capture runs at a time, and every image is fetched once and kept as a data URL (without
-// this each capture re-downloaded every desktop icon), so it stays cheap to repeat.
+// this each capture re-downloaded every desktop icon). The capture context, with its sandbox
+// iframe and style cache, is kept between captures and only rebuilt when the screen resizes.
 let capturing = false;
+let context: Context<HTMLElement> | null = null;
 const dataUrls = new Map<string, Promise<string | false>>();
 function cachedFetch(url: string): Promise<string | false> {
   if (url.startsWith("data:")) return Promise.resolve(url);
@@ -74,23 +77,47 @@ function cachedFetch(url: string): Promise<string | false> {
   }
   return hit;
 }
+async function contextFor(width: number) {
+  const scale = width / document.body.clientWidth;
+  if (context && context.scale === scale) return context;
+  if (context) destroyContext(context);
+  context = await createContext(document.body, {
+    scale,
+    backgroundColor: "#000",
+    font: false,
+    timeout: 1500,
+    fetchFn: cachedFetch,
+    autoDestruct: false,
+  });
+  return context;
+}
 export async function captureScreen(width = 96): Promise<HTMLCanvasElement | null> {
   if (capturing || !document.body.clientWidth) return null;
+  // a screensaver covers the whole screen and is already a canvas: hand it over as it is
+  const saver = document.querySelector<HTMLCanvasElement>("canvas.xp-saver");
+  if (saver) return saver;
   capturing = true;
   try {
-    return await domToCanvas(document.body, {
-      scale: width / document.body.clientWidth,
-      backgroundColor: "#000",
-      font: false,
-      timeout: 1500,
-      fetchFn: cachedFetch,
-    });
+    return await domToCanvas(await contextFor(width));
   } catch {
     return null;
   } finally {
     capturing = false;
   }
 }
+
+// Goes up whenever the screen may look different: any change to the page except the capture's
+// own sandbox iframe, and always while a canvas or video is up (they change without touching it).
+let version = 0;
+new MutationObserver((records) => {
+  if (records.some((r) => !(r.target instanceof HTMLIFrameElement)
+    && ![...r.addedNodes, ...r.removedNodes].every((n) => n instanceof HTMLIFrameElement))) version++;
+}).observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+function screenVersion() {
+  if (document.querySelector("canvas, video")) version++;
+  return version;
+}
+(window as Window & { __screenVersion?: typeof screenVersion }).__screenVersion = screenVersion;
 (window as Window & { __capture?: typeof captureScreen }).__capture = captureScreen;
 
 export function registerWebamp(webamp: WebampLike) {
