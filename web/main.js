@@ -564,11 +564,20 @@ const bliss = new Image();
 bliss.src = 'pc/xp/bliss.jpg';
 bliss.onload = () => { reference = averageLinear(bliss, bliss.naturalWidth, bliss.naturalHeight); };
 
-async function sampleScreen() {
-  try { await sampleOnce(); } catch (e) { console.warn('screen sample failed', e); }
-  setTimeout(sampleScreen, coarse ? 400 : 250);   // keep going whatever happened
+// A snapshot stalls the page for several frames (more on slow machines), so: only when the
+// screen has changed, at most once a second, never while the camera glides or a knob turns,
+// and in the browser's idle time. The glow eases to each new colour, so the wait doesn't show.
+let lastInput = -1e9, seenVersion = -1;
+const busy = () => mode === 'moving' || rotary || performance.now() - lastInput < 600;
+function sampleScreen() {
+  setTimeout(() => (window.requestIdleCallback ?? setTimeout)(async () => {
+    try { if (!busy()) await sampleOnce(); } catch (e) { console.warn('screen sample failed', e); }
+    sampleScreen();                                   // keep going whatever happened
+  }, { timeout: 500 }), coarse ? 1500 : 1000);
 }
 async function sampleOnce() {
+  const version = iframe.contentWindow?.__screenVersion?.();
+  if (version !== undefined && version === seenVersion) return;
   let shot = null;
   try {
     // a capture can outlive the page it was asked of (the PC reloading): never wait forever
@@ -576,6 +585,7 @@ async function sampleOnce() {
       new Promise((r) => setTimeout(() => r(null), 2000))]);
   } catch { /* PC still loading */ }
   if (shot && shot.width) {
+    seenVersion = version ?? -1;
     const avg = averageLinear(shot, shot.width, shot.height);
     tintTarget.setRGB(...avg.map((a, k) => Math.min(a / Math.max(reference[k], 1e-3), 2.5)));
     // the haze around the panel takes the screen's colour, stronger the brighter it is
@@ -790,6 +800,7 @@ function togglePower() {
   audio.setPower(powered);
 }
 function turnVolume(delta) {
+  lastInput = performance.now();
   const v = THREE.MathUtils.clamp(volume + delta, 0, 1);
   if (v === volume) return;
   volume = v;
