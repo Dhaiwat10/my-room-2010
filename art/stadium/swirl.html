@@ -1,0 +1,37 @@
+<!doctype html><meta charset=utf-8>
+<style>html,body{margin:0;background:transparent}@font-face{font-family:Imp;src:local("Impact")}</style>
+<svg id=s xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="-1 -1 2 2"></svg>
+<script>
+const s = document.getElementById('s'), NS = 'http://www.w3.org/2000/svg';
+const P = (r, a) => [r * Math.cos(a), r * Math.sin(a)];
+const blue = '#1f5fd6';
+// four swoosh blades curling into the centre, each a crescent with a sharp tail
+let defs = document.createElementNS(NS, 'defs'); s.appendChild(defs);
+// the words are knocked out of the blue: the plastic shows through them
+const mask = document.createElementNS(NS, 'mask'); mask.id = 'm'; defs.appendChild(mask);
+const mr = document.createElementNS(NS, 'rect'); mr.setAttribute('x', -1); mr.setAttribute('y', -1); mr.setAttribute('width', 2); mr.setAttribute('height', 2); mr.setAttribute('fill', '#fff'); mask.appendChild(mr);
+const blades = document.createElementNS(NS, 'g'); blades.setAttribute('mask', 'url(#m)'); s.appendChild(blades);
+const words = ['SUPER', 'VORTEX', 'STADIUM', ''];
+for (let i = 0; i < 4; i++) {
+  const a0 = i * Math.PI / 2;
+  const N = 60, outer = [], inner = [];
+  for (let k = 0; k <= N; k++) {
+    const t = k / N;                                  // 0 at the tail (outside), 1 at the centre
+    const a = a0 + t * 2.3;
+    const r = 0.92 * Math.pow(1 - t, 0.85) + 0.12;
+    const w = 0.30 * Math.sin(Math.PI * Math.pow(t, 0.55)) * (1 - 0.35 * t);   // thin tail, fat body, tapers at the centre
+    outer.push(P(r, a)); inner.push(P(Math.max(0.02, r - w), a + 0.18 * t));
+  }
+  const d = 'M' + outer.map(p => p.join(',')).join(' L') + ' L' + inner.reverse().map(p => p.join(',')).join(' L') + 'Z';
+  const path = document.createElementNS(NS, 'path'); path.setAttribute('d', d); path.setAttribute('fill', blue); blades.appendChild(path);
+  // the word rides along the middle of the blade
+  if (words[i]) {
+    const mid = []; for (let k = 8; k <= 44; k++) { const t = k / N, a = a0 + t * 2.3, r = 0.92 * Math.pow(1 - t, 0.85) + 0.12, w = 0.30 * Math.sin(Math.PI * Math.pow(t, 0.55)) * (1 - 0.35 * t); mid.push(P(r - w * 0.62, a + 0.09 * t)); }
+    const tp = document.createElementNS(NS, 'path'); tp.id = 'w' + i; tp.setAttribute('d', 'M' + mid.map(p => p.join(',')).join(' L')); defs.appendChild(tp);
+    const tx = document.createElementNS(NS, 'text'); tx.setAttribute('font-family', 'Impact'); tx.setAttribute('font-size', '0.16'); tx.setAttribute('fill', '#000');
+    tx.setAttribute('font-style', 'italic'); tx.setAttribute('letter-spacing', '0.01');
+    const t2 = document.createElementNS(NS, 'textPath'); t2.setAttribute('href', '#w' + i); t2.setAttribute('startOffset', '6%'); t2.textContent = words[i];
+    tx.appendChild(t2); mask.appendChild(tx);
+  }
+}
+</script>

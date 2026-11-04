@@ -12,6 +12,7 @@ import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomAudio } from './audio.js';
 import { createInspector } from './inspect.js';
+import { createBeyGame } from './bey.js';
 
 // Blender's "AgX - Punchy" look: three's AgX plus the same look step Blender applies
 // (power 1.35, saturation 1.4 in AgX log space), so the browser matches the Cycles preview
@@ -649,7 +650,8 @@ if (named.Fan_Blades) {
 
 // ------------------------------------------------------------------ interaction
 // ------------------------------------------------------------------ what you can touch
-// Only real things are interactive: the monitor sits you up to the PC; the speaker's two knobs and the fan bring you in close to use them by hand.
+// Only real things are interactive: the monitor sits you up to the PC; the speaker's two knobs and the fan bring you in close to use them by hand;
+// the stadium under the desk opens a Beyblade battle.
 const actions = {
   Screen: ['zoom', 'Click to use PC'],
   Monitor: ['zoom', 'Click to use PC'],
@@ -659,6 +661,7 @@ const actions = {
   G_boxes: ['games', 'PC games'],
   Fan_Head: ['fan', 'Havells pedestal fan'],
   Fan_Blades: ['fan', 'Havells pedestal fan'],
+  Stadium: ['bey', 'Beyblade stadium'],
 };
 const KNOB_VOL = 'Speaker_L_Knob_Volume', KNOB_PWR = 'Speaker_L_Knob_Power';
 const isKnob = (n) => n === KNOB_VOL || n === KNOB_PWR;
@@ -709,6 +712,7 @@ function addHull(key, src, scale) {
 addHull('pc', named.Monitor, 1.012);
 addHull('tower', named.Tower, 1.01);
 addHull('fan', named.Fan_Head, 1.015);
+addHull('stadium', named.Stadium, 1.012);
 for (const n of FAN_KEYS) addHull(n, named[n], 1.1);
 // the knobs get a clean soft ring in the panel's plane instead (a hull around a short
 // cylinder is half hidden by the panel and the knob itself)
@@ -735,7 +739,7 @@ function addRing(key, knob) {
 }
 addRing(KNOB_VOL, named[KNOB_VOL]);
 addRing(KNOB_PWR, named[KNOB_PWR]);
-const hullKey = (name) => ({ Screen: 'pc', Monitor: 'pc', Tower: 'tower', Fan_Head: 'fan', Fan_Blades: 'fan' })[name] ?? name;
+const hullKey = (name) => ({ Screen: 'pc', Monitor: 'pc', Tower: 'tower', Fan_Head: 'fan', Fan_Blades: 'fan', Stadium: 'stadium' })[name] ?? name;
 const hullT = new THREE.Matrix4(), hullS = new THREE.Matrix4(), hullB = new THREE.Matrix4();
 let hovered = null, hintStart = 3, hintNext = 3;
 function updateHints(t, dt) {
@@ -977,6 +981,9 @@ function updateShelf() {
     `<button data-disc="${id}"><img src="assets/disc_${id}.jpg" alt=""><span>${d.label}</span></button>`).join('');
 }
 const inspector = createInspector();
+const bey = createBeyGame({ audio });
+window.__bey = bey;   // for opening it from the console
+if (new URLSearchParams(location.search).has('bey')) bey.open();   // ?bey: straight into a battle, for playtesting
 const discName = (id) => DISCS[id]?.label ?? 'Disc';
 function putIn(id) {
   if (!drive || drive.has || drive.state !== 'open') return;
@@ -1252,6 +1259,7 @@ el.addEventListener('click', (e) => {
   else if (act === 'drive' && drive) driveIn();
   else if (act === 'games') { audio.knobClick(0.25); openGames(boxAt(lastHit) ?? 'cricket07'); }
   else if (act === 'fan') fanIn();
+  else if (act === 'bey') { $('tip').style.display = 'none'; hovered = null; audio.knobClick(0.25); bey.open(); }
 });
 
 // ------------------------------------------------------------------ moving the camera

@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.6938512325286865,
+   "lightScale": 0.6922463178634644,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.01709999516606331,
+   "screenScale": 0.024188535287976265,
    "nrm": {
     "hi": "room_nrm_hi.jpg",
     "lo": "room_nrm_lo.jpg"
@@ -27,7 +27,7 @@
     "hi": "room_keys_hi.jpg",
     "lo": "room_keys_lo.jpg"
    },
-   "keysScale": 0.7186889052391052,
+   "keysScale": 0.7195479273796082,
    "albedoKtx2": {
     "hi": "room_albedo_hi.ktx2",
     "lo": "room_albedo_lo.ktx2"
@@ -62,12 +62,12 @@
     "hi": "desktop_light_hi.jpg",
     "lo": "desktop_light_lo.jpg"
    },
-   "lightScale": 2.7705576419830322,
+   "lightScale": 2.7094247341156006,
    "screen": {
     "hi": "desktop_screen_hi.jpg",
     "lo": "desktop_screen_lo.jpg"
    },
-   "screenScale": 0.23239757120609283,
+   "screenScale": 0.19165946543216705,
    "nrm": {
     "hi": "desktop_nrm_hi.jpg",
     "lo": "desktop_nrm_lo.jpg"
@@ -80,7 +80,7 @@
     "hi": "desktop_keys_hi.jpg",
     "lo": "desktop_keys_lo.jpg"
    },
-   "keysScale": 3.2003140449523926,
+   "keysScale": 3.194577932357788,
    "albedoKtx2": {
     "hi": "desktop_albedo_hi.ktx2",
     "lo": "desktop_albedo_lo.ktx2"
@@ -115,12 +115,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 1.46663498878479,
+   "lightScale": 1.470292091369629,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.03219836577773094,
+   "screenScale": 0.03260612115263939,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -138,7 +138,7 @@
     "hi": "desk_keys_hi.jpg",
     "lo": "desk_keys_lo.jpg"
    },
-   "keysScale": 0.922156035900116,
+   "keysScale": 0.9021551609039307,
    "albedoKtx2": {
     "hi": "desk_albedo_hi.ktx2",
     "lo": "desk_albedo_lo.ktx2"
@@ -177,12 +177,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.1598258018493652,
+   "lightScale": 2.147355079650879,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.442323207855225,
+   "screenScale": 4.4134111404418945,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -200,7 +200,7 @@
     "hi": "pc_keys_hi.jpg",
     "lo": "pc_keys_lo.jpg"
    },
-   "keysScale": 2.112090826034546,
+   "keysScale": 2.1174123287200928,
    "albedoKtx2": {
     "hi": "pc_albedo_hi.ktx2",
     "lo": "pc_albedo_lo.ktx2"
@@ -239,12 +239,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.018264587968587875,
+   "lightScale": 0.01845930702984333,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005110242869704962,
+   "screenScale": 0.005109312478452921,
    "nrm": {
     "hi": "far_nrm_hi.jpg",
     "lo": "far_nrm_lo.jpg"
@@ -292,12 +292,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5740842223167419,
+   "lightScale": 0.5740979313850403,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.0046006543561816216,
+   "screenScale": 0.004639818798750639,
    "nrm": {
     "hi": "art_nrm_hi.jpg",
     "lo": "art_nrm_lo.jpg"
@@ -345,12 +345,12 @@
     "hi": "boxes_light_hi.jpg",
     "lo": "boxes_light_lo.jpg"
    },
-   "lightScale": 6.879848480224609,
+   "lightScale": 6.829983234405518,
    "screen": {
     "hi": "boxes_screen_hi.jpg",
     "lo": "boxes_screen_lo.jpg"
    },
-   "screenScale": 0.12325284630060196,
+   "screenScale": 0.12365305423736572,
    "nrm": {
     "hi": "boxes_nrm_hi.jpg",
     "lo": "boxes_nrm_lo.jpg"
@@ -363,7 +363,7 @@
     "hi": "boxes_keys_hi.jpg",
     "lo": "boxes_keys_lo.jpg"
    },
-   "keysScale": 6.638771057128906,
+   "keysScale": 6.638769626617432,
    "albedoKtx2": {
     "hi": "boxes_albedo_hi.ktx2",
     "lo": "boxes_albedo_lo.ktx2"
@@ -400,6 +400,7 @@
   "Fan_Key_1": "desk",
   "Fan_Key_2": "desk",
   "Fan_Key_3": "desk",
+  "Stadium": "desk",
   "G_pc": "pc",
   "Monitor": "pc",
   "Keyboard": "pc",
