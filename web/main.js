@@ -11,6 +11,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomAudio } from './audio.js';
+import { createInspector } from './inspect.js';
 
 // Blender's "AgX - Punchy" look: three's AgX plus the same look step Blender applies
 // (power 1.35, saturation 1.4 in AgX log space), so the browser matches the Cycles preview
@@ -616,9 +617,9 @@ fill.fillPos.value.copy(seatPos).add(new THREE.Vector3(-0.3, 1.0, 0.7));   // ab
 // keep all of Blender's frame visible whatever the screen shape; `lens` > 1 narrows it, for
 // close-ups where the seat's wide lens would bend things (down at the tower)
 const baseTan = () => Math.max(vTan, hTan / camera.aspect);
-let lens = 1, lensTo = 1;
+let lens = 1, lensTo = 1, viewZoom = 1;       // viewZoom: scrolling in from the seat (see head)
 function fitFov() {
-  camera.fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(baseTan() / lens)), 15, 100);
+  camera.fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(baseTan() / (lens * viewZoom))), 5, 100);
   camera.updateProjectionMatrix();
 }
 
@@ -644,6 +645,7 @@ const actions = {
   Speaker_L_Knob_Volume: ['knob', 'Volume'],
   Speaker_L_Knob_Power: ['knob', 'Power'],
   Tower: ['drive', 'LG DVD writer'],
+  G_boxes: ['games', 'PC games'],
 };
 const KNOB_VOL = 'Speaker_L_Knob_Volume', KNOB_PWR = 'Speaker_L_Knob_Power';
 const isKnob = (n) => n === KNOB_VOL || n === KNOB_PWR;
@@ -658,11 +660,17 @@ for (const n of [KNOB_VOL, KNOB_PWR]) {
 const pickables = Object.keys(actions).map((n) => (n === 'Screen' ? screenMesh : named['hit:' + n] ?? named[n])).filter(Boolean);
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
+const lastHit = new THREE.Vector3();
 function pick(x, y) {
   ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(pickables, false)[0];
-  return hit ? hit.object.name : null;
+  const hits = ray.intersectObjects(pickables, false);
+  if (hits[0]) lastHit.copy(hits[0].point);
+  // the drive's tap target stands in front of the back of the open tray: the disc wins there
+  const hit = (mode === 'drive' && hits.find((h) => h.object.name === 'PC_Disc' && h.object.visible)) || hits[0];
+  if (!hit) return null;
+  // the drive's tap target sits on the tower's face: from anywhere but the drive, it's the tower
+  return hit.object.name === 'Drive' && mode !== 'drive' ? 'Tower' : hit.object.name;
 }
 
 // ------------------------------------------------------------------ the subtle hint
@@ -845,17 +853,18 @@ function updateDial() {
 
 // ------------------------------------------------------------------ the DVD writer
 // Tap the tower to crouch down to it. Tap the drive to eject: the button clicks, the motor
-// whirrs and the tray slides out with whatever disc is in it. Tap the disc to take it out,
-// put one in from the little shelf, tap the drive again to close it. A disc going in spins
+// whirrs and the tray slides out with whatever disc is in it. Tap the disc to pick it up and
+// look at it (and take it out), or pick one from the little shelf to look at and put in; tap
+// the drive again to close it. A disc going in spins
 // up and XP's AutoPlay starts it; ejecting one takes it away from XP straight away.
 // The tray, its bed and the disc are baked closed, inside the drive, so out here they get
 // plain materials of their own rather than the (dark) light baked in there.
-const DISCS = {
-  cricket07: { label: 'Cricket 07' },
-  sanandreas: { label: 'GTA San Andreas' },
-  vicecity: { label: 'GTA Vice City' },
-  lara: { label: 'Brian Lara Cricket 2005' },
-  aoe: { label: 'Age of Empires III' },
+const DISCS = {   // label, the name on its tab when you look through them, publisher, year out on PC
+  cricket07: { label: 'Cricket 07', short: 'Cricket 07', by: 'EA Sports', year: 2006 },
+  sanandreas: { label: 'GTA San Andreas', short: 'San Andreas', by: 'Rockstar Games', year: 2005 },
+  vicecity: { label: 'GTA Vice City', short: 'Vice City', by: 'Rockstar Games', year: 2003 },
+  lara: { label: 'Brian Lara Cricket 2005', short: 'Brian Lara 2005', by: 'Codemasters', year: 2005 },
+  aoe: { label: 'Age of Empires III', short: 'Age of Empires III', by: 'Microsoft', year: 2005 },
 };
 const discTex = {};   // each label, loaded the first time its disc goes in the tray
 function labelFor(id) {
@@ -922,22 +931,141 @@ function updateShelf() {
   shelf.innerHTML = Object.entries(DISCS).map(([id, d]) =>
     `<button data-disc="${id}"><img src="assets/disc_${id}.jpg" alt=""><span>${d.label}</span></button>`).join('');
 }
-shelf.addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b || !drive || drive.has || drive.state !== 'open') return;
-  drive.has = b.dataset.disc;
-  drive.disc.material.map = labelFor(drive.has);
+const inspector = createInspector();
+const discName = (id) => DISCS[id]?.label ?? 'Disc';
+function putIn(id) {
+  if (!drive || drive.has || drive.state !== 'open') return;
+  drive.has = id;
+  drive.disc.material.map = labelFor(id);
   drive.lift = 1; drive.liftTarget = 0;           // it drops into the tray
   drive.disc.visible = true;
   audio.knobClick(0.5);                           // the disc settling into the well
   updateShelf();
   setHud('Tap the drive to close it');
+}
+function takeOut() {
+  if (!drive || !drive.has || drive.state !== 'open') return;
+  drive.has = null; drive.liftTarget = 1;
+  audio.knobClick(0.4);
+  setHud('Pick a disc to put in');
+}
+shelf.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || !drive || drive.has || drive.state !== 'open') return;
+  audio.knobClick(0.25);
+  openGames(b.dataset.disc, 'disc');
 });
+
+// ------------------------------------------------------------------ the games
+// Tap the stack of boxes (or a disc on the shelf) to look through all of them, starting at the one
+// you touched, and put whichever you like in the drive.
+const gameBoxes = manifest.gameBoxes || {};
+function boxAt(p) {             // which box a tap on the stack landed on: inside its bounds, else nearest
+  let best = null, bestD = Infinity;
+  for (const [id, b] of Object.entries(gameBoxes)) {
+    const lo = new THREE.Vector3(...b.min), hi = new THREE.Vector3(...b.max);
+    const d = new THREE.Box3(lo, hi).expandByScalar(0.002).distanceToPoint(p);
+    if (d < bestD) { bestD = d; best = id; }
+  }
+  return best;
+}
+const games = () => Object.entries(DISCS).map(([id, d]) => ({
+  id, name: d.label, short: d.short, box: `assets/box_${id}.jpg`, disc: labelFor(id),
+  rows: [['Publisher', d.by], ['Released', d.year], ['Platform', 'PC']],
+  badge: () => (drive?.has === id ? (drive.state === 'closed' ? 'In the drive' : 'In the tray') : ''),
+}));
+function openGames(start, as = 'box') {
+  if (!drive) return;
+  const atTray = mode === 'drive' && drive.state === 'open' && !drive.has;   // picking from the shelf
+  inspector.browse(games(), start, {
+    as,
+    actions: (it) => {
+      if (drive.has === it.id) return mode === 'seated' && drive.state === 'closed'
+        ? [{ label: 'Play it', primary: true, run: zoomIn }] : [];
+      return [{ label: 'Put it in the drive', primary: true, run: atTray ? () => putIn(it.id) : () => loadDisc(it.id) }];
+    },
+  });
+}
+// The boxes answer a mouse: hovering over them, the stack eases open a few millimetres, each box
+// floating a little, and the one under the cursor rises and tips toward you a touch more. The
+// bake made them one mesh; split it back into boxes by where each one was (manifest.gameBoxes).
+const boxRig = (() => {
+  const src = named.G_boxes, ids = Object.keys(gameBoxes);
+  if (!src || !ids.length || coarse) return null;
+  src.updateMatrixWorld();
+  const g = src.geometry, p = g.attributes.position, idx = g.index;
+  const bounds = ids.map((id) => new THREE.Box3(new THREE.Vector3(...gameBoxes[id].min), new THREE.Vector3(...gameBoxes[id].max)));
+  const tris = ids.map(() => []), c = new THREE.Vector3(), v = new THREE.Vector3();
+  const n = idx ? idx.count : p.count, at = (i) => (idx ? idx.getX(i) : i);
+  for (let i = 0; i < n; i += 3) {
+    c.set(0, 0, 0);
+    for (let k = 0; k < 3; k++) c.add(v.fromBufferAttribute(p, at(i + k)));
+    c.divideScalar(3).applyMatrix4(src.matrixWorld);
+    let best = 0, bestD = Infinity;
+    bounds.forEach((b, j) => { const d = b.distanceToPoint(c); if (d < bestD) { bestD = d; best = j; } });
+    tris[best].push(at(i), at(i + 1), at(i + 2));
+  }
+  // how high up its pile each box is: the number of boxes under it
+  const level = bounds.map((b, j) => bounds.filter((o, k) => k !== j && o.max.y <= b.min.y + 0.003
+    && o.min.x < b.max.x && o.max.x > b.min.x && o.min.z < b.max.z && o.max.z > b.min.z).length);
+  const boxes = ids.map((id, j) => {
+    const geom = new THREE.BufferGeometry();
+    for (const [k, a] of Object.entries(g.attributes)) geom.setAttribute(k, a);
+    geom.setIndex(tris[j]);
+    const mesh = new THREE.Mesh(geom, src.material);
+    mesh.name = 'G_boxes';
+    const pivot = bounds[j].getCenter(new THREE.Vector3());
+    mesh.matrixAutoUpdate = false;
+    mesh.matrix.makeTranslation(-pivot.x, -pivot.y, -pivot.z).multiply(src.matrixWorld);
+    const holder = new THREE.Group();
+    holder.position.copy(pivot);
+    holder.add(mesh); scene.add(holder);
+    return { id, holder, mesh, pivot, level: level[j], hot: 0, seed: j * 1.7 };
+  });
+  src.visible = false;
+  pickables.splice(pickables.indexOf(src), 1, ...boxes.map((b) => b.mesh));
+  let open = 0, hotId = null;
+  return {
+    set hover(id) { hotId = id; },
+    update(dt, t) {
+      const on = mode === 'seated' && hovered === 'G_boxes';
+      const k = 1 - Math.exp(-dt * 4);
+      open += ((on ? 1 : 0) - open) * k;
+      for (const b of boxes) {
+        b.hot += ((on && b.id === hotId ? 1 : 0) - b.hot) * k;
+        if (open < 1e-4 && b.hot < 1e-4) { b.holder.position.copy(b.pivot); b.holder.rotation.set(0, 0, 0); continue; }
+        const lift = open * (0.0015 + b.level * 0.0035 + Math.sin(t * 1.6 + b.seed) * 0.0007) + b.hot * 0.004;
+        b.holder.position.set(b.pivot.x, b.pivot.y + lift, b.pivot.z);
+        b.holder.rotation.set(-b.hot * 0.05, Math.sin(t * 0.9 + b.seed) * 0.012 * open, Math.sin(t * 1.1 + b.seed) * 0.006 * open);
+      }
+    },
+  };
+})();
+
+// from the desk: down to the tower, eject, swap the disc, close it; closing sits you back up to
+// the screen to watch it start (see updateDrive)
+const until = (ok, ms = 8000) => new Promise((res) => {
+  const t0 = performance.now();
+  (function check() { if (ok() || performance.now() - t0 > ms) res(); else requestAnimationFrame(check); })();
+});
+const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+async function loadDisc(id) {
+  if (!drive || drive.has === id && drive.state === 'closed') return;
+  if (mode !== 'drive') { driveIn(); await until(() => mode === 'drive'); }
+  await wait(250);
+  if (drive.state === 'closed') driveTap('Drive');
+  await until(() => drive.state === 'open');
+  await wait(300);
+  if (drive.has) { takeOut(); await wait(700); }
+  putIn(id);
+  await wait(800);
+  if (drive.state === 'open') driveTap('Drive');
+}
+const DRIVE_OPEN_HUD = () => (drive.has ? 'Tap the disc to pick it up · tap the drive to close' : 'Pick a disc to put in');
 function driveTap(name) {
   if (!drive) return;
-  if (name === 'PC_Disc' && drive.state === 'open' && drive.has) {   // lift the disc out
-    drive.has = null; drive.liftTarget = 1;
-    audio.knobClick(0.4);
-    setHud('Pick a disc to put in');
+  if (name === 'PC_Disc' && drive.state === 'open' && drive.has) {   // pick it up for a look
+    audio.knobClick(0.3);
+    inspector.show(labelFor(drive.has), discName(drive.has), [{ label: 'Take it out', primary: true, run: takeOut }], 'Leave it in');
     return;
   }
   if (drive.state === 'closed') {
@@ -960,7 +1088,7 @@ function updateDrive(dt) {
     drive.open = THREE.MathUtils.clamp(drive.open + dir * dt / (dir > 0 ? 1.25 : 1.3), 0, 1);
     if (drive.open === 1 && dir > 0) {
       drive.state = 'open';
-      if (mode === 'drive') setHud(drive.has ? 'Tap the disc to take it out · tap the drive to close' : 'Pick a disc to put in');
+      if (mode === 'drive') setHud(DRIVE_OPEN_HUD());
     }
     if (drive.open === 0 && dir < 0) {
       drive.state = 'closed';
@@ -1001,7 +1129,7 @@ function driveIn() {
   moveTo(p, q, () => {
     mode = 'drive';
     $('back').style.display = 'block';
-    setHud(drive.state === 'open' ? (drive.has ? 'Tap the disc to take it out · tap the drive to close' : 'Pick a disc to put in') : 'Tap the drive to open the tray');
+    setHud(drive.state === 'open' ? DRIVE_OPEN_HUD() : 'Tap the drive to open the tray');
   }, 1.0);
 }
 function driveOut() {
@@ -1047,10 +1175,20 @@ el.addEventListener('pointermove', (e) => {
   const tip = $('tip');
   tip.style.display = hovered && mode !== 'knobs' && mode !== 'drive' ? 'block' : 'none';
   if (hovered && actions[hovered]) { tip.textContent = actions[hovered][1]; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
+  if (hovered === 'G_boxes') {                     // which game: the rig lifts it, the tip names it
+    const id = boxAt(lastHit);
+    if (boxRig) boxRig.hover = id;
+    if (DISCS[id]) tip.textContent = DISCS[id].label;
+  }
 });
 el.addEventListener('pointerup', () => { rotary = null; pressAt = null; });
 el.addEventListener('pointerleave', () => { if (!rotary) hovered = null; });
 el.addEventListener('wheel', (e) => {
+  if (mode === 'seated') {                         // a trackpad pinch arrives as a wheel with ctrl held
+    e.preventDefault();
+    head.zoomBy(e.deltaY * (e.ctrlKey ? 8 : 1), e.clientX, e.clientY);
+    return;
+  }
   if (mode !== 'knobs') return;
   e.preventDefault();
   turnVolume(-e.deltaY * 0.0009);
@@ -1065,6 +1203,7 @@ el.addEventListener('click', (e) => {
   if (act === 'zoom') zoomIn();
   else if (act === 'knob') knobsIn(name === KNOB_PWR);
   else if (act === 'drive' && drive) driveIn();
+  else if (act === 'games') { audio.knobClick(0.25); openGames(boxAt(lastHit) ?? 'cricket07'); }
 });
 
 // ------------------------------------------------------------------ moving the camera
@@ -1090,7 +1229,8 @@ function zoomPose() {
   return [p, q];
 }
 const setHud = (txt) => { $('hud').textContent = txt; $('hud').style.opacity = txt ? 1 : 0; };
-const SEATED_HUD = 'Tap the monitor to use the PC';
+const SEATED_HUD = coarse ? 'Tap the monitor to use the PC · pinch to zoom' : 'Tap the monitor to use the PC · scroll to zoom';
+setHud(SEATED_HUD);
 function zoomIn() {
   $('tip').style.display = 'none'; hovered = null;
   setHud('');
@@ -1171,6 +1311,8 @@ setMuted(muted, 2.5);                              // the room's sound fades up 
 muteBtn.addEventListener('click', () => setMuted(!muted));
 window.addEventListener('keydown', (e) => {
   if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey) setMuted(!muted);
+  // Esc backs out of a close-up, as the prompts say (the PC keeps its own keys while you use it)
+  if (e.key === 'Escape' && !e.defaultPrevented && $('back').style.display === 'block') $('back').click();
 });
 const hookPc = () => {
   try { listenForGesture(iframe.contentWindow); } catch { /* not loaded yet */ }
@@ -1273,6 +1415,47 @@ const head = (() => {
   const shown = { p: new THREE.Vector3(), q: new THREE.Quaternion(), valid: false };
   const up = new THREE.Vector3(0, 1, 0), right = new THREE.Vector3(), camUp = new THREE.Vector3();
   const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qc = new THREE.Quaternion();
+  // zooming from the seat, like a game's scope: it narrows the lens and turns toward whatever
+  // was under the cursor, so that stays put while everything else grows round it
+  const MAX_ZOOM = 3.2, AIM_YAW = 0.5, AIM_PITCH = 0.3;
+  const zoom = { v: 1, to: 1 }, aim = { x: 0, y: 0, tx: 0, ty: 0 };
+  function zoomBy(delta, cx, cy) {
+    const z0 = zoom.to, z1 = THREE.MathUtils.clamp(z0 * Math.exp(-delta * 0.0018), 1, MAX_ZOOM);
+    if (z1 === z0) return;
+    if (z1 > z0) {
+      const nx = (cx / innerWidth) * 2 - 1, ny = (cy / innerHeight) * 2 - 1;
+      const t = baseTan() / lens, a = camera.aspect;
+      aim.tx -= Math.atan(nx * t * a / z0) - Math.atan(nx * t * a / z1);
+      aim.ty -= Math.atan(ny * t / z0) - Math.atan(ny * t / z1);
+      aim.tx = THREE.MathUtils.clamp(aim.tx, -AIM_YAW, AIM_YAW);
+      aim.ty = THREE.MathUtils.clamp(aim.ty, -AIM_PITCH, AIM_PITCH);
+    } else {                                       // backing out drifts back to straight ahead
+      const k = (z1 - 1) / (z0 - 1);
+      aim.tx *= k; aim.ty *= k;
+    }
+    zoom.to = z1;
+  }
+  // two fingers on a phone: pinch to zoom about the middle of them
+  const touches = new Map();
+  let pinch = null;
+  const gap = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) pinch = gap();
+  });
+  renderer.domElement.addEventListener('pointermove', (e) => {
+    if (!touches.has(e.pointerId)) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && touches.size === 2 && mode === 'seated') {
+      const g = gap(), [a, b] = [...touches.values()];
+      zoomBy(-Math.log(g / pinch) / 0.0018, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      pinch = g;
+    }
+  });
+  const lift = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; };
+  renderer.domElement.addEventListener('pointerup', lift);
+  renderer.domElement.addEventListener('pointercancel', lift);
 
   // the mouse: where it sits in the window, centred; back to the middle when it leaves
   addEventListener('pointermove', (e) => {
@@ -1317,10 +1500,21 @@ const head = (() => {
       shown.valid = false;
     },
     // after: remember where the camera is meant to be, then add the head on top
+    zoomBy,
+    get zoomed() { return zoom.to > 1.001; },
     apply(dt, t) {
       base.p.copy(camera.position); base.q.copy(camera.quaternion);
+      // the zoom eases quickly, and lets go whenever you leave the seat
+      if (mode !== 'seated') { zoom.to = 1; aim.tx = aim.ty = 0; }
+      const kz = 1 - Math.exp(-dt * 9);
+      zoom.v += (zoom.to - zoom.v) * kz;
+      aim.x += (aim.tx - aim.x) * kz; aim.y += (aim.ty - aim.y) * kz;
+      if (Math.abs(zoom.v - zoom.to) < 1e-4) zoom.v = zoom.to;
       w += ((!reduced && mode === 'seated' ? 1 : 0) - w) * (1 - Math.exp(-dt * 3));
-      if (w < 1e-4) return;
+      if (zoom.v !== viewZoom) { viewZoom = zoom.v; fitFov(); }
+      // the turn only applies seated: a move away starts from wherever you were looking
+      const seated = mode === 'seated' ? 1 : 0, ay = aim.x * seated, ap = aim.y * seated;
+      if (w < 1e-4 && Math.abs(ay) + Math.abs(ap) < 1e-5) return;
       const k = 1 - Math.exp(-dt * 3.5);           // ~0.3 s to follow, no overshoot
       look.x += (look.tx - look.x) * k;
       look.y += (look.ty - look.y) * k;
@@ -1328,8 +1522,8 @@ const head = (() => {
       const breath = Math.sin(t * 1.55) * 0.6 + Math.sin(t * 0.71 + 1.3) * 0.4;
       const driftX = Math.sin(t * 0.13) * 0.6 + Math.sin(t * 0.31 + 2.1) * 0.4;
       const driftY = Math.sin(t * 0.17 + 0.7) * 0.6 + Math.sin(t * 0.23 + 4.0) * 0.4;
-      const yaw = (-look.x * YAW + driftX * 0.0035) * w;
-      const pitch = (-look.y * PITCH + driftY * 0.0025 + breath * 0.0012) * w;
+      const yaw = (-look.x * YAW + driftX * 0.0035) * w + ay;
+      const pitch = (-look.y * PITCH + driftY * 0.0025 + breath * 0.0012) * w + ap;
       const roll = (Math.sin(t * 0.19 + 0.4) * 0.0018 - look.x * 0.004) * w;
       right.set(1, 0, 0).applyQuaternion(base.q);
       camUp.set(0, 1, 0).applyQuaternion(base.q);
@@ -1490,6 +1684,7 @@ renderer.setAnimationLoop(() => {
   updatePowerKnob(dt);
   updateDial();
   dust.update(clock.elapsedTime);
+  boxRig?.update(dt, clock.elapsedTime);
   if (post) post.render(dt); else renderer.render(scene, camera);
   cssRenderer.render(cssScene, camera);
 });

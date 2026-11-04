@@ -55,7 +55,7 @@ scene.render.bake.use_clear = True
 # ---------------------------------------------------------------- what goes where
 SKIP = ('Glass', 'Cam_', 'Monitor_Glow')
 WEB_SCREEN = 'VA_Screen'          # replaced by a live canvas/iframe in the browser
-ATLAS = {'pc': 4096, 'desk': 4096, 'desktop': 4096, 'room': 4096, 'far': 1024, 'art': 2048}
+ATLAS = {'pc': 4096, 'desk': 4096, 'desktop': 4096, 'room': 4096, 'far': 1024, 'art': 2048, 'boxes': 2048}
 # the desk itself (top, sides, back, the keyboard drawer) is the nearest big surface and fills
 # most of the frame, so it gets an atlas of its own: ~3 texels per mm instead of ~1
 DESKTOP_PREFIX = ('Desk_', 'Keyboard_Drawer')
@@ -80,6 +80,8 @@ def group_of(o):
     cols = {c.name for c in o.users_collection}
     if o.name.startswith(('Art_', 'Clock_')):
         return 'art'          # posters and photos get a sharp texture of their own
+    if o.name.startswith('GameBox_'):
+        return 'boxes'        # the game boxes' print: spines and covers read up close
     if 'PC' in cols:
         return 'pc'
     if o.name.startswith(DESKTOP_PREFIX):
@@ -279,6 +281,18 @@ art_parts = [o for o in candidates if o.name.startswith(('Art_', 'Clock_')) and 
 loose = set(shell_parts) | set(art_parts)      # unwrapped one by one, merged afterwards
 
 # ---------------------------------------------------------------- group + join
+# the game boxes become one mesh, so note where each one was (glTF axes): a tap on the stack
+# needs to know which box it hit
+def game_box_bounds():
+    out = {}
+    for o in candidates:
+        if o.name.startswith('GameBox_'):
+            ps = [o.matrix_world @ Vector(c) for c in o.bound_box]
+            lo = [min(p[k] for p in ps) for k in range(3)]; hi = [max(p[k] for p in ps) for k in range(3)]
+            out[o.name[len('GameBox_'):]] = {'min': [round(lo[0], 4), round(lo[2], 4), round(-hi[1], 4)],
+                                             'max': [round(hi[0], 4), round(hi[2], 4), round(-lo[1], 4)]}
+    return out
+GAME_BOXES = game_box_bounds()
 clusters = {}
 for o in candidates:
     if o == screen:
@@ -674,6 +688,7 @@ render_probe()
 manifest['probe'] = {'file': 'probe.exr', 'pos': gl(PROBE_POS),
                      'boxMin': gl(Vector((IN_MIN.x, IN_MAX.y, IN_MIN.z))),
                      'boxMax': gl(Vector((IN_MAX.x, IN_MIN.y, IN_MAX.z)))}
+manifest['gameBoxes'] = GAME_BOXES
 manifest['keys'] = []
 for names, radius in KEYS:
     obs = [bpy.data.objects[n] for n in names]

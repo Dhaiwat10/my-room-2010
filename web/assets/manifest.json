@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.69424968957901,
+   "lightScale": 0.6936989426612854,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.01713637076318264,
+   "screenScale": 0.017146771773695946,
    "nrm": {
     "hi": "room_nrm_hi.jpg",
     "lo": "room_nrm_lo.jpg"
@@ -62,12 +62,12 @@
     "hi": "desktop_light_hi.jpg",
     "lo": "desktop_light_lo.jpg"
    },
-   "lightScale": 3.819765329360962,
+   "lightScale": 2.764470338821411,
    "screen": {
     "hi": "desktop_screen_hi.jpg",
     "lo": "desktop_screen_lo.jpg"
    },
-   "screenScale": 0.2337619960308075,
+   "screenScale": 0.23223309218883514,
    "nrm": {
     "hi": "desktop_nrm_hi.jpg",
     "lo": "desktop_nrm_lo.jpg"
@@ -80,7 +80,7 @@
     "hi": "desktop_keys_hi.jpg",
     "lo": "desktop_keys_lo.jpg"
    },
-   "keysScale": 4.038732528686523,
+   "keysScale": 3.200333595275879,
    "albedoKtx2": {
     "hi": "desktop_albedo_hi.ktx2",
     "lo": "desktop_albedo_lo.ktx2"
@@ -115,12 +115,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 1.391480565071106,
+   "lightScale": 1.4514573812484741,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.03223138675093651,
+   "screenScale": 0.03242477402091026,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -138,7 +138,7 @@
     "hi": "desk_keys_hi.jpg",
     "lo": "desk_keys_lo.jpg"
    },
-   "keysScale": 0.914331316947937,
+   "keysScale": 0.9142429232597351,
    "albedoKtx2": {
     "hi": "desk_albedo_hi.ktx2",
     "lo": "desk_albedo_lo.ktx2"
@@ -177,12 +177,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.2049672603607178,
+   "lightScale": 2.1603009700775146,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.434014320373535,
+   "screenScale": 4.440687656402588,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -200,7 +200,7 @@
     "hi": "pc_keys_hi.jpg",
     "lo": "pc_keys_lo.jpg"
    },
-   "keysScale": 2.1127676963806152,
+   "keysScale": 2.112090826034546,
    "albedoKtx2": {
     "hi": "pc_albedo_hi.ktx2",
     "lo": "pc_albedo_lo.ktx2"
@@ -239,12 +239,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.017678873613476753,
+   "lightScale": 0.018264295533299446,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.00508385244756937,
+   "screenScale": 0.005110275931656361,
    "nrm": {
     "hi": "far_nrm_hi.jpg",
     "lo": "far_nrm_lo.jpg"
@@ -292,12 +292,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5736567378044128,
+   "lightScale": 0.5741199254989624,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.004552088677883148,
+   "screenScale": 0.004599781706929207,
    "nrm": {
     "hi": "art_nrm_hi.jpg",
     "lo": "art_nrm_lo.jpg"
@@ -310,7 +310,7 @@
     "hi": "art_keys_hi.jpg",
     "lo": "art_keys_lo.jpg"
    },
-   "keysScale": 0.5548502802848816,
+   "keysScale": 0.5548499822616577,
    "albedoKtx2": {
     "hi": "art_albedo_hi.ktx2",
     "lo": "art_albedo_lo.ktx2"
@@ -334,6 +334,59 @@
    "keysKtx2": {
     "hi": "art_keys_hi.ktx2",
     "lo": "art_keys_lo.ktx2"
+   }
+  },
+  "boxes": {
+   "albedo": {
+    "hi": "boxes_albedo_hi.jpg",
+    "lo": "boxes_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "boxes_light_hi.jpg",
+    "lo": "boxes_light_lo.jpg"
+   },
+   "lightScale": 6.879861831665039,
+   "screen": {
+    "hi": "boxes_screen_hi.jpg",
+    "lo": "boxes_screen_lo.jpg"
+   },
+   "screenScale": 0.12324893474578857,
+   "nrm": {
+    "hi": "boxes_nrm_hi.jpg",
+    "lo": "boxes_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "boxes_surf_hi.jpg",
+    "lo": "boxes_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "boxes_keys_hi.jpg",
+    "lo": "boxes_keys_lo.jpg"
+   },
+   "keysScale": 6.6387715339660645,
+   "albedoKtx2": {
+    "hi": "boxes_albedo_hi.ktx2",
+    "lo": "boxes_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "boxes_light_hi.ktx2",
+    "lo": "boxes_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "boxes_screen_hi.ktx2",
+    "lo": "boxes_screen_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "boxes_nrm_hi.ktx2",
+    "lo": "boxes_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "boxes_surf_hi.ktx2",
+    "lo": "boxes_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "boxes_keys_hi.ktx2",
+    "lo": "boxes_keys_lo.ktx2"
    }
   }
  },
@@ -367,7 +420,8 @@
   "Clock_Hand_Hour": "art",
   "Clock_Hand_Minute": "art",
   "Clock_Hand_Second": "art",
-  "Art": "art"
+  "Art": "art",
+  "G_boxes": "boxes"
  },
  "exposure": 0.18000000715255737,
  "look": "None",
@@ -440,5 +494,67 @@
    ],
    "radius": 0.45
   }
- ]
+ ],
+ "gameBoxes": {
+  "aoe": {
+   "min": [
+    0.0431,
+    0.75,
+    -1.6036
+   ],
+   "max": [
+    0.2389,
+    0.786,
+    -1.4604
+   ]
+  },
+  "cricket07": {
+   "min": [
+    0.0402,
+    0.7502,
+    -1.4392
+   ],
+   "max": [
+    0.2198,
+    0.7862,
+    -1.2208
+   ]
+  },
+  "lara": {
+   "min": [
+    0.0356,
+    0.7863,
+    -1.6104
+   ],
+   "max": [
+    0.2324,
+    0.8223,
+    -1.4656
+   ]
+  },
+  "sanandreas": {
+   "min": [
+    0.0468,
+    0.8226,
+    -1.5991
+   ],
+   "max": [
+    0.2392,
+    0.8586,
+    -1.4609
+   ]
+  },
+  "vicecity": {
+   "min": [
+    0.0355,
+    0.8589,
+    -1.611
+   ],
+   "max": [
+    0.2345,
+    0.8949,
+    -1.463
+   ]
+  }
+ }
 }
