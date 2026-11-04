@@ -55,7 +55,7 @@ scene.render.bake.use_clear = True
 # ---------------------------------------------------------------- what goes where
 SKIP = ('Glass', 'Cam_', 'Monitor_Glow')
 WEB_SCREEN = 'VA_Screen'          # replaced by a live canvas/iframe in the browser
-ATLAS = {'pc': 4096, 'desk': 4096, 'desktop': 4096, 'room': 4096, 'far': 1024, 'art': 2048, 'boxes': 2048}
+ATLAS = {'pc': 4096, 'desk': 4096, 'desktop': 4096, 'room': 4096, 'far': 1024, 'art': 2048, 'boxes': 2048, 'stadium': 2048}
 # the desk itself (top, sides, back, the keyboard drawer) is the nearest big surface and fills
 # most of the frame, so it gets an atlas of its own: ~3 texels per mm instead of ~1
 DESKTOP_PREFIX = ('Desk_', 'Keyboard_Drawer')
@@ -83,6 +83,8 @@ def group_of(o):
         return 'art'          # posters and photos get a sharp texture of their own
     if o.name.startswith('GameBox_'):
         return 'boxes'        # the game boxes' print: spines and covers read up close
+    if o.name.startswith('Stadium_'):
+        return 'stadium'      # under the desk, so the desk's atlas gave it a sliver: its own, for the stickers and the swirl
     if 'PC' in cols:
         return 'pc'
     if o.name.startswith(DESKTOP_PREFIX):

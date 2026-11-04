@@ -14,7 +14,7 @@
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.024188535287976265,
+   "screenScale": 0.024215957149863243,
    "nrm": {
     "hi": "room_nrm_hi.jpg",
     "lo": "room_nrm_lo.jpg"
@@ -62,7 +62,7 @@
     "hi": "desktop_light_hi.jpg",
     "lo": "desktop_light_lo.jpg"
    },
-   "lightScale": 2.7094247341156006,
+   "lightScale": 2.712117910385132,
    "screen": {
     "hi": "desktop_screen_hi.jpg",
     "lo": "desktop_screen_lo.jpg"
@@ -80,7 +80,7 @@
     "hi": "desktop_keys_hi.jpg",
     "lo": "desktop_keys_lo.jpg"
    },
-   "keysScale": 3.194577932357788,
+   "keysScale": 3.2010788917541504,
    "albedoKtx2": {
     "hi": "desktop_albedo_hi.ktx2",
     "lo": "desktop_albedo_lo.ktx2"
@@ -115,12 +115,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 1.470292091369629,
+   "lightScale": 1.478300929069519,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.03260612115263939,
+   "screenScale": 0.03264866769313812,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -138,7 +138,7 @@
     "hi": "desk_keys_hi.jpg",
     "lo": "desk_keys_lo.jpg"
    },
-   "keysScale": 0.9021551609039307,
+   "keysScale": 0.9001943469047546,
    "albedoKtx2": {
     "hi": "desk_albedo_hi.ktx2",
     "lo": "desk_albedo_lo.ktx2"
@@ -182,7 +182,7 @@
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.4134111404418945,
+   "screenScale": 4.439377307891846,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -200,7 +200,7 @@
     "hi": "pc_keys_hi.jpg",
     "lo": "pc_keys_lo.jpg"
    },
-   "keysScale": 2.1174123287200928,
+   "keysScale": 2.1174166202545166,
    "albedoKtx2": {
     "hi": "pc_albedo_hi.ktx2",
     "lo": "pc_albedo_lo.ktx2"
@@ -239,12 +239,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.01845930702984333,
+   "lightScale": 0.01845797896385193,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005109312478452921,
+   "screenScale": 0.005109342280775309,
    "nrm": {
     "hi": "far_nrm_hi.jpg",
     "lo": "far_nrm_lo.jpg"
@@ -292,12 +292,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5740979313850403,
+   "lightScale": 0.5740899443626404,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.004639818798750639,
+   "screenScale": 0.0046287416480481625,
    "nrm": {
     "hi": "art_nrm_hi.jpg",
     "lo": "art_nrm_lo.jpg"
@@ -310,7 +310,7 @@
     "hi": "art_keys_hi.jpg",
     "lo": "art_keys_lo.jpg"
    },
-   "keysScale": 0.5548502802848816,
+   "keysScale": 0.5548499822616577,
    "albedoKtx2": {
     "hi": "art_albedo_hi.ktx2",
     "lo": "art_albedo_lo.ktx2"
@@ -334,6 +334,59 @@
    "keysKtx2": {
     "hi": "art_keys_hi.ktx2",
     "lo": "art_keys_lo.ktx2"
+   }
+  },
+  "stadium": {
+   "albedo": {
+    "hi": "stadium_albedo_hi.jpg",
+    "lo": "stadium_albedo_lo.jpg"
+   },
+   "light": {
+    "hi": "stadium_light_hi.jpg",
+    "lo": "stadium_light_lo.jpg"
+   },
+   "lightScale": 0.4360189437866211,
+   "screen": {
+    "hi": "stadium_screen_hi.jpg",
+    "lo": "stadium_screen_lo.jpg"
+   },
+   "screenScale": 0.002861693501472473,
+   "nrm": {
+    "hi": "stadium_nrm_hi.jpg",
+    "lo": "stadium_nrm_lo.jpg"
+   },
+   "surf": {
+    "hi": "stadium_surf_hi.jpg",
+    "lo": "stadium_surf_lo.jpg"
+   },
+   "keys": {
+    "hi": "stadium_keys_hi.jpg",
+    "lo": "stadium_keys_lo.jpg"
+   },
+   "keysScale": 0.03459155932068825,
+   "albedoKtx2": {
+    "hi": "stadium_albedo_hi.ktx2",
+    "lo": "stadium_albedo_lo.ktx2"
+   },
+   "lightKtx2": {
+    "hi": "stadium_light_hi.ktx2",
+    "lo": "stadium_light_lo.ktx2"
+   },
+   "screenKtx2": {
+    "hi": "stadium_screen_hi.ktx2",
+    "lo": "stadium_screen_lo.ktx2"
+   },
+   "nrmKtx2": {
+    "hi": "stadium_nrm_hi.ktx2",
+    "lo": "stadium_nrm_lo.ktx2"
+   },
+   "surfKtx2": {
+    "hi": "stadium_surf_hi.ktx2",
+    "lo": "stadium_surf_lo.ktx2"
+   },
+   "keysKtx2": {
+    "hi": "stadium_keys_hi.ktx2",
+    "lo": "stadium_keys_lo.ktx2"
    }
   },
   "boxes": {
@@ -363,7 +416,7 @@
     "hi": "boxes_keys_hi.jpg",
     "lo": "boxes_keys_lo.jpg"
    },
-   "keysScale": 6.638769626617432,
+   "keysScale": 6.645242691040039,
    "albedoKtx2": {
     "hi": "boxes_albedo_hi.ktx2",
     "lo": "boxes_albedo_lo.ktx2"
@@ -400,7 +453,6 @@
   "Fan_Key_1": "desk",
   "Fan_Key_2": "desk",
   "Fan_Key_3": "desk",
-  "Stadium": "desk",
   "G_pc": "pc",
   "Monitor": "pc",
   "Keyboard": "pc",
@@ -426,6 +478,7 @@
   "Clock_Hand_Minute": "art",
   "Clock_Hand_Second": "art",
   "Art": "art",
+  "Stadium": "stadium",
   "G_boxes": "boxes"
  },
  "exposure": 0.18000000715255737,
