@@ -330,7 +330,8 @@ gltf.scene.traverse((o) => {
 // So the blades really turn at ~20 rps (integrated from a slowly wandering speed), and each
 // frame draws them smeared across the angle they sweep while an imaginary shutter is open.
 const FAN_RUNNING = true;
-const FAN_RPS = 15.5;                          // ~930 rpm: the fan on speed 2, calmer to watch
+const FAN_SPEEDS = [0, 11, 15.5, 19];          // rps on each key: off, I, II (~930 rpm, calmer to watch), III
+let fanSpeed = 1, fanRps = FAN_SPEEDS[1];      // the key that's down (I, the gentlest), and how fast the blades really turn
 const SHUTTER = 1 / 110;                       // seconds of motion each frame smears together
 const BLUR = 12;                               // copies drawn across that smear
 const fanHead = named.Fan_Head;
@@ -354,6 +355,7 @@ if (FAN_RUNNING && fanHead && named.Fan_Blades) {
   }
   blades.visible = false;
   for (const b of fanBlur) b.base = blades.quaternion.clone();
+  fanBlur.blades = blades;
 }
 const headBase = fanHead ? fanHead.quaternion.clone() : null;
 const FAN_AXIS = new THREE.Vector3(0, 0, -1);  // Blender's local y (the fan's axis) is glTF's local -z
@@ -363,17 +365,29 @@ let fanAngle = 0, fanLast = 0;
 function runFan(t) {
   if (!fanBlur.length) return;
   const dt = Math.min(t - fanLast, 0.1); fanLast = t;
+  // the motor pulls up to a new speed in a couple of seconds; switched down or off, the blades
+  // coast on the air's drag and the bearing's friction, and take ten seconds or so to stop
+  const want = FAN_SPEEDS[fanSpeed];
+  if (want >= fanRps) fanRps += (want - fanRps) * (1 - Math.exp(-dt / 1.6));
+  else fanRps = Math.max(want, fanRps - (fanRps / 3.5 + 0.25) * dt);
+  audio.setPedestalSpeed(fanRps / FAN_SPEEDS[2]);
   // the motor's speed wanders a little: slow mains/load drift plus a faint faster wobble
-  const rps = FAN_RPS * (1 + 0.012 * Math.sin(t * 0.37) + 0.006 * Math.sin(t * 1.9 + 1.3) + 0.003 * Math.sin(t * 5.3));
+  const rps = fanRps * (1 + 0.012 * Math.sin(t * 0.37) + 0.006 * Math.sin(t * 1.9 + 1.3) + 0.003 * Math.sin(t * 5.3));
   const w = rps * Math.PI * 2;
   fanAngle = (fanAngle + w * dt) % (Math.PI * 2);
   const sweep = w * SHUTTER;                   // angle swept while the shutter is open
+  // all but stopped, the smear is gone: draw the real blades instead
+  const still = sweep < 0.01;
+  fanBlur.blades.visible = still;
+  if (still) fanBlur.blades.quaternion.copy(fanBlur[0].base).multiply(spinQ.setFromAxisAngle(FAN_AXIS, fanAngle));
   for (const b of fanBlur) {
+    b.mesh.visible = !still;
     spinQ.setFromAxisAngle(FAN_AXIS, fanAngle - sweep * b.frac);
     b.mesh.quaternion.copy(b.base).multiply(spinQ);
   }
   // the whole head shivers very slightly at the blade rate: the slightly unbalanced rotor
-  const shiver = 0.0009 * Math.sin(fanAngle * 3), nod = 0.0006 * Math.sin(fanAngle * 3 + 1.1);
+  const run = Math.min(fanRps / FAN_SPEEDS[2], 1.3);
+  const shiver = 0.0009 * run * Math.sin(fanAngle * 3), nod = 0.0006 * run * Math.sin(fanAngle * 3 + 1.1);
   shakeQ.setFromAxisAngle(SHAKE_Y, shiver); shakeQ2.setFromAxisAngle(SHAKE_X, nod);
   fanHead.quaternion.copy(headBase).multiply(shakeQ).multiply(shakeQ2);
 }
@@ -635,17 +649,16 @@ if (named.Fan_Blades) {
 
 // ------------------------------------------------------------------ interaction
 // ------------------------------------------------------------------ what you can touch
-// Only real things are interactive: the monitor (and the keyboard and mouse in front of it)
-// sit you up to the PC; the speaker's two knobs bring you in close to use them by hand.
+// Only real things are interactive: the monitor sits you up to the PC; the speaker's two knobs and the fan bring you in close to use them by hand.
 const actions = {
-  Screen: ['zoom', 'ViewSonic VA2216w: sit up and use it'],
-  Monitor: ['zoom', 'ViewSonic VA2216w: sit up and use it'],
-  Keyboard: ['zoom', 'Logitech keyboard'],
-  Mouse: ['zoom', 'Logitech mouse'],
+  Screen: ['zoom', 'Click to use PC'],
+  Monitor: ['zoom', 'Click to use PC'],
   Speaker_L_Knob_Volume: ['knob', 'Volume'],
   Speaker_L_Knob_Power: ['knob', 'Power'],
   Tower: ['drive', 'LG DVD writer'],
   G_boxes: ['games', 'PC games'],
+  Fan_Head: ['fan', 'Havells pedestal fan'],
+  Fan_Blades: ['fan', 'Havells pedestal fan'],
 };
 const KNOB_VOL = 'Speaker_L_Knob_Volume', KNOB_PWR = 'Speaker_L_Knob_Power';
 const isKnob = (n) => n === KNOB_VOL || n === KNOB_PWR;
@@ -657,7 +670,11 @@ for (const n of [KNOB_VOL, KNOB_PWR]) {
   hit.position.copy(new THREE.Box3().setFromObject(k).getCenter(new THREE.Vector3()));
   named['hit:' + n] = hit;
 }
-const pickables = Object.keys(actions).map((n) => (n === 'Screen' ? screenMesh : named['hit:' + n] ?? named[n])).filter(Boolean);
+// the fan's piano keys on its base: 0, I, II, III
+const FAN_KEYS = [0, 1, 2, 3].map((i) => `Fan_Key_${i}`);
+const isFanKey = (n) => FAN_KEYS.includes(n);
+const pickables = [...Object.keys(actions), ...FAN_KEYS]
+  .map((n) => (n === 'Screen' ? screenMesh : named['hit:' + n] ?? named[n])).filter(Boolean);
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 const lastHit = new THREE.Vector3();
@@ -690,9 +707,9 @@ function addHull(key, src, scale) {
   (hulls[key] ??= []).push({ hull, src, scale, centre });
 }
 addHull('pc', named.Monitor, 1.012);
-addHull('kb', named.Keyboard, 1.03);
-addHull('mouse', named.Mouse, 1.08);
 addHull('tower', named.Tower, 1.01);
+addHull('fan', named.Fan_Head, 1.015);
+for (const n of FAN_KEYS) addHull(n, named[n], 1.1);
 // the knobs get a clean soft ring in the panel's plane instead (a hull around a short
 // cylinder is half hidden by the panel and the knob itself)
 const ringTex = (() => {
@@ -718,13 +735,14 @@ function addRing(key, knob) {
 }
 addRing(KNOB_VOL, named[KNOB_VOL]);
 addRing(KNOB_PWR, named[KNOB_PWR]);
-const hullKey = (name) => ({ Screen: 'pc', Monitor: 'pc', Keyboard: 'kb', Mouse: 'mouse', Tower: 'tower' })[name] ?? name;
+const hullKey = (name) => ({ Screen: 'pc', Monitor: 'pc', Tower: 'tower', Fan_Head: 'fan', Fan_Blades: 'fan' })[name] ?? name;
 const hullT = new THREE.Matrix4(), hullS = new THREE.Matrix4(), hullB = new THREE.Matrix4();
 let hovered = null, hintStart = 3, hintNext = 3;
 function updateHints(t, dt) {
   if (t > hintNext) { hintStart = t; hintNext = t + 22; }
   const pulse = Math.max(0, Math.sin(Math.min((t - hintStart) / 1.8, 1) * Math.PI)) * 0.2;
-  const inReach = mode === 'knobs' ? [KNOB_VOL, KNOB_PWR] : mode === 'seated' ? Object.keys(hulls) : mode === 'zoomed' ? [KNOB_VOL, KNOB_PWR] : [];
+  const inReach = mode === 'knobs' ? [KNOB_VOL, KNOB_PWR] : mode === 'fan' ? FAN_KEYS
+    : mode === 'seated' ? Object.keys(hulls).filter((k) => !isFanKey(k)) : mode === 'zoomed' ? [KNOB_VOL, KNOB_PWR] : [];
   for (const [key, list] of Object.entries(hulls)) {
     const live = inReach.includes(key);
     const target = !live ? 0 : (hovered && hullKey(hovered) === key ? 0.42 : pulse);
@@ -818,6 +836,33 @@ function turnVolume(delta) {
   if (notch !== lastNotch) { if (lastNotch >= 0) audio.knobClick(0.22); lastNotch = notch; }
   showDial();
 }
+
+// ------------------------------------------------------------------ the fan's keys
+// Piano keys, like the real Havells: press I, II or III and it latches down while the one
+// that was down pops back up; 0 goes down under your finger, lets the latched key up and
+// springs back, and the fan coasts to a stop.
+const KEY_TRAVEL = 0.005;                          // how far a key goes in, all the way
+const fanKeys = FAN_KEYS.map((n) => named[n] && { mesh: named[n], basePos: named[n].position.clone(), down: 0 });
+let zeroUntil = 0;
+function pressFanKey(i) {
+  if (!fanKeys[i]) return;
+  const was = fanSpeed;
+  if (i === 0) zeroUntil = performance.now() + 160;
+  fanKeys[i].down = Math.max(fanKeys[i].down, 0.5);   // a nudge, so even a latched key answers the press
+  fanSpeed = i;
+  audio.fanKey(fanKeys[i].basePos, was !== 0 && was !== i);
+}
+function updateFanKeys(dt) {
+  const now = performance.now();
+  fanKeys.forEach((k, i) => {
+    if (!k) return;
+    // a latched key sits a touch above the bottom of its travel; 0 only while it's held
+    const want = i === 0 ? (now < zeroUntil ? 1 : 0) : (fanSpeed === i ? 0.85 : 0);
+    k.down += (want - k.down) * (1 - Math.exp(-dt * 30));
+    k.mesh.position.copy(k.basePos).y -= k.down * KEY_TRAVEL;
+  });
+}
+window.__fan = () => ({ speed: fanSpeed, rps: fanRps, mode });   // for checking from the console
 
 // a faint arc around the volume knob while you're turning it, showing where it is
 const dial = document.createElement('div');
@@ -1140,10 +1185,11 @@ function driveOut() {
 }
 
 // ------------------------------------------------------------------ pointer
-let mode = 'seated';   // seated | moving | zoomed | knobs | drive
+let mode = 'seated';   // seated | moving | zoomed | knobs | drive | fan
 const el = renderer.domElement;
 const reachable = (name) => name && (mode === 'seated' ? name in actions
   : mode === 'drive' ? ['Drive', 'PC_Disc', 'PC_Drive_Bed', 'Tower'].includes(name)
+  : mode === 'fan' ? isFanKey(name)
   : isKnob(name) && (mode === 'zoomed' || mode === 'knobs'));
 let rotary = null, pressMoved = 0, pressAt = null;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1173,7 +1219,7 @@ el.addEventListener('pointermove', (e) => {
   hovered = reachable(name) ? name : null;
   el.style.cursor = hovered ? (mode === 'knobs' && hovered === KNOB_VOL ? 'grab' : 'pointer') : (mode === 'knobs' ? 'grab' : 'default');
   const tip = $('tip');
-  tip.style.display = hovered && mode !== 'knobs' && mode !== 'drive' ? 'block' : 'none';
+  tip.style.display = hovered && mode !== 'knobs' && mode !== 'drive' && mode !== 'fan' ? 'block' : 'none';
   if (hovered && actions[hovered]) { tip.textContent = actions[hovered][1]; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
   if (hovered === 'G_boxes') {                     // which game: the rig lifts it, the tip names it
     const id = boxAt(lastHit);
@@ -1198,12 +1244,14 @@ el.addEventListener('click', (e) => {
   const name = pick(e.clientX, e.clientY);
   if (!reachable(name)) return;
   if (mode === 'knobs') { if (name === KNOB_PWR) togglePower(); return; }
+  if (mode === 'fan') { pressFanKey(FAN_KEYS.indexOf(name)); return; }
   if (mode === 'drive') { driveTap(name); return; }
   const act = actions[name][0];
   if (act === 'zoom') zoomIn();
   else if (act === 'knob') knobsIn(name === KNOB_PWR);
   else if (act === 'drive' && drive) driveIn();
   else if (act === 'games') { audio.knobClick(0.25); openGames(boxAt(lastHit) ?? 'cricket07'); }
+  else if (act === 'fan') fanIn();
 });
 
 // ------------------------------------------------------------------ moving the camera
@@ -1284,7 +1332,36 @@ function knobsOut() {
     moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); }, 0.9);
   }
 }
-$('back').addEventListener('click', () => (mode === 'knobs' ? knobsOut() : mode === 'drive' ? driveOut() : zoomOut()));
+// down at the fan's base: bend over its keys from the front, the row square across the view
+function fanPose() {
+  const boxes = fanKeys.filter(Boolean).map((k) => new THREE.Box3().setFromObject(k.mesh).getCenter(new THREE.Vector3()));
+  const target = boxes.reduce((a, b) => a.add(b), new THREE.Vector3()).divideScalar(boxes.length);
+  // out from the pole, which stands under the head
+  const out = target.clone().sub(fanHead.getWorldPosition(new THREE.Vector3())).setY(0).normalize();
+  const eye = target.clone().addScaledVector(out, 0.1).add(new THREE.Vector3(0, 0.13, 0));
+  target.addScaledVector(out, -0.012);             // the HAVELLS plate behind the keys in frame too
+  const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(eye, target, new THREE.Vector3(0, 1, 0)));
+  return [eye, q];
+}
+function fanIn() {
+  if (!fanKeys.some(Boolean)) return;
+  $('tip').style.display = 'none'; hovered = null;
+  setHud('');
+  const [p, q] = fanPose();
+  moveTo(p, q, () => {
+    mode = 'fan';
+    $('back').style.display = 'block';
+    setHud(`${coarse ? 'Tap' : 'Click'} I, II or III for the speed · 0 to switch it off`);
+    setTimeout(() => { if (mode === 'fan') setHud(''); }, 4500);
+    hintStart = clock.elapsedTime + 0.4;            // the keys breathe once as you arrive
+  }, 1.2);
+}
+function fanOut() {
+  setHud('');
+  $('back').style.display = 'none';
+  moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); }, 1.2);
+}
+$('back').addEventListener('click', () => (mode === 'knobs' ? knobsOut() : mode === 'drive' ? driveOut() : mode === 'fan' ? fanOut() : zoomOut()));
 
 // ------------------------------------------------------------------ the PC
 const powerOn = () => iframe.contentWindow?.postMessage({ type: 'power' }, '*');
@@ -1608,6 +1685,7 @@ const post = !usePost ? null : (() => {
     if (mode === 'zoomed') return at.copy(sCenter);
     if (mode === 'knobs' && knobs[KNOB_VOL]) return knobs[KNOB_VOL].mesh.getWorldPosition(at);
     if (mode === 'drive' && drive) return at.copy(drive.faceCentre);
+    if (mode === 'fan' && fanKeys[2]) return fanKeys[2].mesh.getWorldPosition(at);
     return null;
   }
   return {
@@ -1682,6 +1760,7 @@ renderer.setAnimationLoop(() => {
   head.apply(dt, clock.elapsedTime);
   updateHints(clock.elapsedTime, dt);
   updatePowerKnob(dt);
+  updateFanKeys(dt);
   updateDial();
   dust.update(clock.elapsedTime);
   boxRig?.update(dt, clock.elapsedTime);

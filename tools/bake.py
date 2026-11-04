@@ -94,10 +94,11 @@ def group_of(o):
 
 
 CLOCK_HANDS = ('Clock_Hand_Hour', 'Clock_Hand_Minute', 'Clock_Hand_Second')
-# pieces the browser moves on their own: clock hands, the speaker's knobs
+# pieces the browser moves on their own: clock hands, the speaker's knobs, the fan's keys
 CLOCK_HANDS += ('Speaker_L_Knob_Power', 'Speaker_L_Knob_Volume')
 CLOCK_HANDS += tuple(f'Modem_LED_{i}' for i in range(5)) + ('PC_LED_Power', 'PC_LED_HDD')   # lit and blinked in the browser
 CLOCK_HANDS += ('PC_Drive_Tray', 'PC_Drive_Bed', 'PC_Disc')   # the DVD tray slides out in the browser
+CLOCK_HANDS += tuple(f'Fan_Key_{i}' for i in range(4))      # the fan's piano keys: 0, I, II, III
 
 
 def cluster_of(o, group):
