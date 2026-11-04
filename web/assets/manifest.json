@@ -9,12 +9,12 @@
     "hi": "room_light_hi.jpg",
     "lo": "room_light_lo.jpg"
    },
-   "lightScale": 0.6936989426612854,
+   "lightScale": 0.6938512325286865,
    "screen": {
     "hi": "room_screen_hi.jpg",
     "lo": "room_screen_lo.jpg"
    },
-   "screenScale": 0.017146771773695946,
+   "screenScale": 0.01709999516606331,
    "nrm": {
     "hi": "room_nrm_hi.jpg",
     "lo": "room_nrm_lo.jpg"
@@ -62,12 +62,12 @@
     "hi": "desktop_light_hi.jpg",
     "lo": "desktop_light_lo.jpg"
    },
-   "lightScale": 2.764470338821411,
+   "lightScale": 2.7705576419830322,
    "screen": {
     "hi": "desktop_screen_hi.jpg",
     "lo": "desktop_screen_lo.jpg"
    },
-   "screenScale": 0.23223309218883514,
+   "screenScale": 0.23239757120609283,
    "nrm": {
     "hi": "desktop_nrm_hi.jpg",
     "lo": "desktop_nrm_lo.jpg"
@@ -80,7 +80,7 @@
     "hi": "desktop_keys_hi.jpg",
     "lo": "desktop_keys_lo.jpg"
    },
-   "keysScale": 3.200333595275879,
+   "keysScale": 3.2003140449523926,
    "albedoKtx2": {
     "hi": "desktop_albedo_hi.ktx2",
     "lo": "desktop_albedo_lo.ktx2"
@@ -115,12 +115,12 @@
     "hi": "desk_light_hi.jpg",
     "lo": "desk_light_lo.jpg"
    },
-   "lightScale": 1.4514573812484741,
+   "lightScale": 1.46663498878479,
    "screen": {
     "hi": "desk_screen_hi.jpg",
     "lo": "desk_screen_lo.jpg"
    },
-   "screenScale": 0.03242477402091026,
+   "screenScale": 0.03219836577773094,
    "emit": {
     "hi": "desk_emit_hi.jpg",
     "lo": "desk_emit_lo.jpg"
@@ -138,7 +138,7 @@
     "hi": "desk_keys_hi.jpg",
     "lo": "desk_keys_lo.jpg"
    },
-   "keysScale": 0.9142429232597351,
+   "keysScale": 0.922156035900116,
    "albedoKtx2": {
     "hi": "desk_albedo_hi.ktx2",
     "lo": "desk_albedo_lo.ktx2"
@@ -177,12 +177,12 @@
     "hi": "pc_light_hi.jpg",
     "lo": "pc_light_lo.jpg"
    },
-   "lightScale": 2.1603009700775146,
+   "lightScale": 2.1598258018493652,
    "screen": {
     "hi": "pc_screen_hi.jpg",
     "lo": "pc_screen_lo.jpg"
    },
-   "screenScale": 4.440687656402588,
+   "screenScale": 4.442323207855225,
    "emit": {
     "hi": "pc_emit_hi.jpg",
     "lo": "pc_emit_lo.jpg"
@@ -239,12 +239,12 @@
     "hi": "far_light_hi.jpg",
     "lo": "far_light_lo.jpg"
    },
-   "lightScale": 0.018264295533299446,
+   "lightScale": 0.018264587968587875,
    "screen": {
     "hi": "far_screen_hi.jpg",
     "lo": "far_screen_lo.jpg"
    },
-   "screenScale": 0.005110275931656361,
+   "screenScale": 0.005110242869704962,
    "nrm": {
     "hi": "far_nrm_hi.jpg",
     "lo": "far_nrm_lo.jpg"
@@ -292,12 +292,12 @@
     "hi": "art_light_hi.jpg",
     "lo": "art_light_lo.jpg"
    },
-   "lightScale": 0.5741199254989624,
+   "lightScale": 0.5740842223167419,
    "screen": {
     "hi": "art_screen_hi.jpg",
     "lo": "art_screen_lo.jpg"
    },
-   "screenScale": 0.004599781706929207,
+   "screenScale": 0.0046006543561816216,
    "nrm": {
     "hi": "art_nrm_hi.jpg",
     "lo": "art_nrm_lo.jpg"
@@ -310,7 +310,7 @@
     "hi": "art_keys_hi.jpg",
     "lo": "art_keys_lo.jpg"
    },
-   "keysScale": 0.5548499822616577,
+   "keysScale": 0.5548502802848816,
    "albedoKtx2": {
     "hi": "art_albedo_hi.ktx2",
     "lo": "art_albedo_lo.ktx2"
@@ -345,12 +345,12 @@
     "hi": "boxes_light_hi.jpg",
     "lo": "boxes_light_lo.jpg"
    },
-   "lightScale": 6.879861831665039,
+   "lightScale": 6.879848480224609,
    "screen": {
     "hi": "boxes_screen_hi.jpg",
     "lo": "boxes_screen_lo.jpg"
    },
-   "screenScale": 0.12324893474578857,
+   "screenScale": 0.12325284630060196,
    "nrm": {
     "hi": "boxes_nrm_hi.jpg",
     "lo": "boxes_nrm_lo.jpg"
@@ -363,7 +363,7 @@
     "hi": "boxes_keys_hi.jpg",
     "lo": "boxes_keys_lo.jpg"
    },
-   "keysScale": 6.6387715339660645,
+   "keysScale": 6.638771057128906,
    "albedoKtx2": {
     "hi": "boxes_albedo_hi.ktx2",
     "lo": "boxes_albedo_lo.ktx2"
@@ -396,6 +396,10 @@
   "G_desk": "desk",
   "Fan_Blades": "desk",
   "Fan_Head": "desk",
+  "Fan_Key_0": "desk",
+  "Fan_Key_1": "desk",
+  "Fan_Key_2": "desk",
+  "Fan_Key_3": "desk",
   "G_pc": "pc",
   "Monitor": "pc",
   "Keyboard": "pc",
@@ -443,6 +447,68 @@
    2.8,
    1.97
   ]
+ },
+ "gameBoxes": {
+  "aoe": {
+   "min": [
+    0.0431,
+    0.75,
+    -1.6036
+   ],
+   "max": [
+    0.2389,
+    0.786,
+    -1.4604
+   ]
+  },
+  "lara": {
+   "min": [
+    0.0356,
+    0.7863,
+    -1.6104
+   ],
+   "max": [
+    0.2324,
+    0.8223,
+    -1.4656
+   ]
+  },
+  "sanandreas": {
+   "min": [
+    0.0468,
+    0.8226,
+    -1.5991
+   ],
+   "max": [
+    0.2392,
+    0.8586,
+    -1.4609
+   ]
+  },
+  "vicecity": {
+   "min": [
+    0.0355,
+    0.8589,
+    -1.611
+   ],
+   "max": [
+    0.2345,
+    0.8949,
+    -1.463
+   ]
+  },
+  "cricket07": {
+   "min": [
+    0.0402,
+    0.7502,
+    -1.4392
+   ],
+   "max": [
+    0.2198,
+    0.7862,
+    -1.2208
+   ]
+  }
  },
  "keys": [
   {
@@ -494,67 +560,5 @@
    ],
    "radius": 0.45
   }
- ],
- "gameBoxes": {
-  "aoe": {
-   "min": [
-    0.0431,
-    0.75,
-    -1.6036
-   ],
-   "max": [
-    0.2389,
-    0.786,
-    -1.4604
-   ]
-  },
-  "cricket07": {
-   "min": [
-    0.0402,
-    0.7502,
-    -1.4392
-   ],
-   "max": [
-    0.2198,
-    0.7862,
-    -1.2208
-   ]
-  },
-  "lara": {
-   "min": [
-    0.0356,
-    0.7863,
-    -1.6104
-   ],
-   "max": [
-    0.2324,
-    0.8223,
-    -1.4656
-   ]
-  },
-  "sanandreas": {
-   "min": [
-    0.0468,
-    0.8226,
-    -1.5991
-   ],
-   "max": [
-    0.2392,
-    0.8586,
-    -1.4609
-   ]
-  },
-  "vicecity": {
-   "min": [
-    0.0355,
-    0.8589,
-    -1.611
-   ],
-   "max": [
-    0.2345,
-    0.8949,
-    -1.463
-   ]
-  }
- }
+ ]
 }

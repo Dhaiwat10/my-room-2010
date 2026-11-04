@@ -162,6 +162,39 @@ export class RoomAudio {
     if (ctx.state === 'running') s.play();
   }
 
+  // the fan's speed, as a share of speed II: the air gets louder and its throb faster with
+  // the blades, and dies away as they coast to a stop
+  setPedestalSpeed(k) {
+    const s = this.pedestal; if (!s) return;
+    if (Math.abs(k - (this.pedestalK ?? 1)) < 0.002) return;
+    this.pedestalK = k;
+    s.setVolume(0.07 * Math.min(k, 1.4) ** 1.5);
+    s.setPlaybackRate(0.55 + 0.45 * k);
+  }
+
+  // one of the fan's piano keys going down: a hollow plastic clack, then, if another key was
+  // latched, the lighter snap of it letting go
+  fanKey(at, release) {
+    if (this.ctx.state !== 'running') return;
+    if (!this.fanKeySrc) {
+      this.fanKeySrc = this.positional(this.scene, at, 1, 0.3);
+      this.fanKeyIn = this.ctx.createGain(); this.fanKeySrc.setNodeSource(this.fanKeyIn);
+      const SR = this.ctx.sampleRate, len = Math.floor(SR * 0.08);
+      this.fanKeyBuf = this.ctx.createBuffer(1, len, SR);
+      const d = this.fanKeyBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) { const t = i / SR; d[i] = Math.exp(-t / 0.003) * (Math.random() * 2 - 1) * 0.6 + Math.exp(-t / 0.012) * Math.sin(2 * Math.PI * 950 * t) * 0.3 + Math.exp(-t / 0.025) * Math.sin(2 * Math.PI * 190 * t) * 0.35; }
+    }
+    this.fanKeySrc.position.copy(at);
+    const play = (when, rate, gain) => {
+      const s = this.ctx.createBufferSource(); s.buffer = this.fanKeyBuf;
+      s.playbackRate.value = rate * (0.95 + Math.random() * 0.1);
+      const g = this.ctx.createGain(); g.gain.value = gain;
+      s.connect(g); g.connect(this.fanKeyIn); s.start(this.ctx.currentTime + when);
+    };
+    play(0, 1, 0.5);
+    if (release) play(0.035, 1.6, 0.22);
+  }
+
   // the Ajanta clock: a quiet quartz tick once a second from the wall, the kind you only hear
   // when the room's gone quiet. Two slightly different clicks alternate, as real movements do.
   addClock(scene, at) {
