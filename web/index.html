@@ -6,17 +6,19 @@
 <meta name="theme-color" content="#111111">
 <title>My Room, 2010</title>
 <link rel="icon" href="data:,">
+<!-- the look of the menus of the time (FIFA 08/09): condensed capitals on square black slats -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Barlow+Semi+Condensed:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root { --ink: #f4efe6; --muted: #b9b2a6; --panel: rgba(20, 18, 16, 0.78); }
   html, body { margin: 0; height: 100%; background: #111; color: var(--ink); overflow: hidden;
     font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent; touch-action: none; overscroll-behavior: none; }
   #gl { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
-
   /* the XP machine, placed on the monitor's screen in 3D (main.js). Always running and
      visible; it only takes clicks and keys once you've sat up to it. */
   #css3d { position: fixed; inset: 0; pointer-events: none; }
-
   /* The panel: a 2008 ViewSonic TN LCD with a CCFL backlight, not a modern screen.
      What that looked like, layer by layer (none of the layers take clicks):
        - low contrast: blacks are a glowing blue-grey, never black; colours a bit washed out
@@ -52,14 +54,12 @@
   #monitor.close .lcd-grid { opacity: 0.16; }
   #monitor.close .lcd-grain { opacity: 0.06; }
   #monitor.close { box-shadow: 0 0 40px 8px var(--haze, rgba(0, 0, 0, 0)); }
-
   /* loading: a thin bar, nothing else; it fades away to the scene */
   #loader { position: fixed; inset: 0; display: grid; place-items: center; background: #0b0a09;
     transition: opacity .8s; z-index: 10; }
   #loader.gone { opacity: 0; pointer-events: none; }
   #bar { width: 160px; height: 2px; background: #241f1a; border-radius: 2px; overflow: hidden; }
   #bar i { display: block; height: 100%; width: 0; background: #d9b98a; transition: width .25s; }
-
   #hud { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%);
     background: var(--panel); padding: 7px 14px; border-radius: 999px; font-size: 13px; color: var(--muted);
     white-space: nowrap; transition: opacity .4s; pointer-events: none; }
@@ -92,11 +92,68 @@
   #shelf button { display: flex; align-items: center; gap: 8px; background: var(--panel); color: var(--ink); border: 0;
     border-radius: 999px; padding: 5px 14px 5px 5px; font: inherit; font-size: 13px; cursor: pointer; }
   #shelf img { width: 34px; height: 34px; border-radius: 50%; display: block; }
+  #inspect { position: fixed; inset: 0; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .35s;
+    background: radial-gradient(ellipse at 50% 42%, rgba(255, 236, 210, 0.07), rgba(0, 0, 0, 0.45) 75%);
+    -webkit-backdrop-filter: blur(14px) brightness(0.5) saturate(0.85); backdrop-filter: blur(14px) brightness(0.5) saturate(0.85); }
+  #inspect.on { opacity: 1; pointer-events: auto; }
+  #inspect canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  #inspect canvas.held { cursor: grabbing; }
+  .inspect-card { position: absolute; left: 50%; bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+    transform: translate(-50%, 8px); transition: transform .45s cubic-bezier(.2, .8, .2, 1); text-align: center;
+    width: max-content; max-width: calc(100vw - 32px); }
+  #inspect.on .inspect-card { transform: translate(-50%, 0); }
+  .inspect-title { font-size: 20px; font-weight: 600; letter-spacing: 0.01em; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6); }
+  .inspect-hint { font-size: 12px; color: var(--muted); margin: 2px 0 14px; }
+  .inspect-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .inspect-actions button { font: inherit; font-size: 14px; border-radius: 999px; padding: 10px 20px; cursor: pointer;
+    background: var(--panel); color: var(--ink); border: 1px solid rgba(244, 239, 230, 0.18); }
+  .inspect-actions button.primary { background: var(--ink); color: #17130f; border-color: transparent; font-weight: 600; }
+  .inspect-badge { font-size: 12px; color: #9fe3a6; min-height: 0; }
+  .inspect-badge:empty { display: none; }
+  .inspect-shelf { display: none; justify-content: center; gap: 8px; margin: 0 0 14px; }
+  #inspect.browse .inspect-shelf { display: flex; }
+  /* each game's cover, cut straight out of its box print: the front is the second cell across */
+  .inspect-shelf button { width: 40px; height: 56px; padding: 0; border: 0; border-radius: 3px; cursor: pointer;
+    background-size: 253.4% auto; background-position: 17.41% 50%; background-color: #222;
+    opacity: 0.55; transform: translateY(0); transition: opacity .2s, transform .2s, box-shadow .2s; }
+  .inspect-shelf button.on { opacity: 1; transform: translateY(-4px); box-shadow: 0 0 0 2px var(--ink), 0 6px 18px rgba(0, 0, 0, 0.5); }
+  .inspect-shelf button:hover { opacity: 0.9; }
+  .inspect-nav { position: absolute; top: 42%; transform: translateY(-50%); display: none; width: 44px; height: 44px;
+    border-radius: 50%; border: 1px solid rgba(244, 239, 230, 0.18); background: var(--panel); color: var(--ink);
+    font-size: 24px; line-height: 1; cursor: pointer; }
+  #inspect.browse .inspect-nav { display: block; }
+  .inspect-nav.prev { left: max(16px, calc(50% - min(42vw, 420px))); }
+  .inspect-nav.next { right: max(16px, calc(50% - min(42vw, 420px))); }
+  .inspect-actions button:disabled { opacity: 0.5; cursor: default; }
+  .inspect-actions button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   #tip { position: fixed; pointer-events: none; background: var(--panel); padding: 4px 9px; border-radius: 6px;
     font-size: 12px; display: none; transform: translate(12px, 12px); }
   #rotate { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; background: var(--panel);
     padding: 6px 10px; border-radius: 8px; font-size: 12px; color: var(--muted); display: none; }
   @media (orientation: portrait) and (pointer: coarse) { #rotate { display: block; } }
+  /* The look, after FIFA 08/09's menus: condensed capitals, square black slats with a thin white rim,
+     the main choice a solid white slat, and the room greyed out behind a close look */
+  :root { --ink: #f5f5f2; --panel: rgba(6, 6, 6, 0.82); --rim: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    --caps: "Barlow Condensed", "Arial Narrow", sans-serif; --body: "Barlow Semi Condensed", "Arial Narrow", sans-serif; }
+  html, body { font-family: var(--body); }
+  #hud { border-radius: 0; font: 600 15px var(--body); text-transform: uppercase; letter-spacing: .04em; color: #ddd;
+    background: rgba(0, 0, 0, 0.78); box-shadow: var(--rim); padding: 7px 16px; }
+  #back, #shelf button, #mute { border-radius: 0; box-shadow: var(--rim); }
+  #back, #shelf button { font: 700 16px var(--caps); text-transform: uppercase; letter-spacing: .04em; }
+  #back { font-size: 17px; }
+  #tip { border-radius: 0; font: 700 14px var(--caps); text-transform: uppercase; letter-spacing: .04em; background: #fff; color: #000; }
+  #inspect { background: rgba(0, 0, 0, 0.35);
+    -webkit-backdrop-filter: blur(12px) brightness(0.5) grayscale(0.75); backdrop-filter: blur(12px) brightness(0.5) grayscale(0.75); }
+  .inspect-title { font: 800 34px/1 var(--caps); text-transform: uppercase; letter-spacing: .01em; }
+  .inspect-hint { font: 600 13px var(--body); text-transform: uppercase; letter-spacing: .06em; color: #aaa; margin: 6px 0 16px; }
+  .inspect-actions button { border-radius: 0; border: 0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.7);
+    font: 700 17px var(--caps); text-transform: uppercase; letter-spacing: .05em; padding: 11px 24px; transform: skewX(-14deg); }
+  .inspect-actions button.primary { background: linear-gradient(#fff, #d6d6d6); color: #000; box-shadow: none; }
+  .inspect-shelf button { border-radius: 0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); filter: grayscale(0.8); }
+  .inspect-shelf button.on { filter: none; box-shadow: 0 0 0 2px #fff, 0 6px 18px rgba(0, 0, 0, 0.6); }
+  .inspect-nav { border-radius: 0; border: 1px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.7); font: 700 26px var(--caps); }
+  .inspect-badge { display: inline-block; font: 700 12px var(--caps); letter-spacing: .1em; text-transform: uppercase;
+    color: #000; background: #fff; padding: 3px 7px; margin-top: 6px; }
 </style>
 <script type="importmap">
 { "imports": {
