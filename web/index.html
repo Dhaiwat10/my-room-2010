@@ -92,16 +92,16 @@
   #shelf button { display: flex; align-items: center; gap: 8px; background: var(--panel); color: var(--ink); border: 0;
     border-radius: 999px; padding: 5px 14px 5px 5px; font: inherit; font-size: 13px; cursor: pointer; }
   #shelf img { width: 34px; height: 34px; border-radius: 50%; display: block; }
-  #inspect { position: fixed; inset: 0; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .35s;
+  #inspect, #bey { position: fixed; inset: 0; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .35s;
     background: radial-gradient(ellipse at 50% 42%, rgba(255, 236, 210, 0.07), rgba(0, 0, 0, 0.45) 75%);
     -webkit-backdrop-filter: blur(14px) brightness(0.5) saturate(0.85); backdrop-filter: blur(14px) brightness(0.5) saturate(0.85); }
-  #inspect.on { opacity: 1; pointer-events: auto; }
-  #inspect canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  #inspect.on, #bey.on { opacity: 1; pointer-events: auto; }
+  #inspect canvas, #bey canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
   #inspect canvas.held { cursor: grabbing; }
   .inspect-card { position: absolute; left: 50%; bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
     transform: translate(-50%, 8px); transition: transform .45s cubic-bezier(.2, .8, .2, 1); text-align: center;
     width: max-content; max-width: calc(100vw - 32px); }
-  #inspect.on .inspect-card { transform: translate(-50%, 0); }
+  #inspect.on .inspect-card, #bey.on .inspect-card { transform: translate(-50%, 0); }
   .inspect-title { font-size: 20px; font-weight: 600; letter-spacing: 0.01em; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6); }
   .inspect-hint { font-size: 12px; color: var(--muted); margin: 2px 0 14px; }
   .inspect-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
@@ -142,7 +142,7 @@
   #back, #shelf button { font: 700 16px var(--caps); text-transform: uppercase; letter-spacing: .04em; }
   #back { font-size: 17px; }
   #tip { border-radius: 0; font: 700 14px var(--caps); text-transform: uppercase; letter-spacing: .04em; background: #fff; color: #000; }
-  #inspect { background: rgba(0, 0, 0, 0.35);
+  #inspect, #bey { background: rgba(0, 0, 0, 0.35);
     -webkit-backdrop-filter: blur(12px) brightness(0.5) grayscale(0.75); backdrop-filter: blur(12px) brightness(0.5) grayscale(0.75); }
   .inspect-title { font: 800 34px/1 var(--caps); text-transform: uppercase; letter-spacing: .01em; }
   .inspect-hint { font: 600 13px var(--body); text-transform: uppercase; letter-spacing: .06em; color: #aaa; margin: 6px 0 16px; }
@@ -154,6 +154,105 @@
   .inspect-nav { border-radius: 0; border: 1px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.7); font: 700 26px var(--caps); }
   .inspect-badge { display: inline-block; font: 700 12px var(--caps); letter-spacing: .1em; text-transform: uppercase;
     color: #000; background: #fff; padding: 3px 7px; margin-top: 6px; }
+  /* the Beyblade stadium: choosing a top, the countdown, the ripcord, and both tops' spin */
+  #bey canvas { cursor: crosshair; }
+  body.bey-open #mute { z-index: 30; }
+  #bey .bey-tops { display: flex; justify-content: center; gap: 8px; margin: 0 0 14px; }
+  #bey .bey-tops:empty { display: none; }
+  #bey .bey-tops button { background: rgba(0, 0, 0, 0.7); border: 0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+    padding: 4px; cursor: pointer; line-height: 0; transition: transform .15s; }
+  #bey .bey-tops button img { width: 84px; height: 84px; display: block; }
+  #bey .bey-tops button:hover { transform: translateY(-2px); }
+  #bey .bey-tops button.on { background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.12) 70%); box-shadow: inset 0 0 0 2px #fff; }
+  .bey-call { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%) skewX(-10deg); pointer-events: none;
+    font: 800 clamp(44px, 9vw, 110px)/1 var(--caps); text-transform: uppercase; color: #fff; letter-spacing: .02em;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7); opacity: 0; transition: opacity .15s; white-space: nowrap; }
+  .bey-call.on { opacity: 1; }
+  .bey-call.pop { animation: beypop .45s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes beypop { from { transform: translate(-50%, -50%) skewX(-10deg) scale(1.5); opacity: 0; } }
+  .bey-meters { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    display: flex; gap: 14px; pointer-events: none; opacity: 0; transition: opacity .3s; }
+  .bey-meters.on { opacity: 1; }
+  .bey-meter { width: min(36vw, 240px); background: rgba(0, 0, 0, 0.7); box-shadow: var(--rim); padding: 4px 10px 4px 4px;
+    display: flex; align-items: center; gap: 8px; }
+  .bey-meter span img { width: 36px; height: 36px; display: block; }
+  .bey-meter b { display: block; flex: 1; height: 6px; background: rgba(255, 255, 255, 0.15); }
+  .bey-meter.cpu { flex-direction: row-reverse; padding: 4px 4px 4px 10px; }
+  .bey-meter b i { display: block; height: 100%; width: 100%; background: #fff; transform-origin: left; }
+  .bey-meter.cpu { text-align: right; }
+  .bey-meter.cpu b i { transform-origin: right; margin-left: auto; }
+  .bey-cord { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #bey.slim .inspect-title { display: none; }
+  #bey .inspect-hint:empty { display: none; }
+  .bey-grade { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%) skewX(-10deg); pointer-events: none;
+    font: 800 clamp(26px, 4.5vw, 52px)/1 var(--caps); text-transform: uppercase; letter-spacing: .04em; opacity: 0; transition: opacity .2s;
+    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.8); white-space: nowrap; }
+  .bey-grade.on { opacity: 1; }
+  .bey-grade.good { color: #ffd23f; }
+  .bey-grade.bad { color: #ff8a80; }
+  .bey-grade.pop { animation: beypop .4s cubic-bezier(.2, .8, .2, 1); }
+  .bey-gauge { position: absolute; right: max(24px, 8vw); top: 50%; transform: translateY(-50%); width: 34px; height: min(46vh, 320px);
+    pointer-events: none; opacity: 0; transition: opacity .2s; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font: 700 13px var(--caps); text-transform: uppercase; letter-spacing: .08em; color: #fff; }
+  .bey-gauge.on { opacity: 1; }
+  .bey-gauge b { position: relative; flex: 1; width: 100%; background: rgba(0, 0, 0, 0.7); box-shadow: var(--rim); overflow: hidden; }
+  .bey-gauge i { position: absolute; inset: 0; transform-origin: bottom; transform: scaleY(0);
+    background: linear-gradient(to top, #2f62b8, #ff4a3a 70%, #ffd23f); }
+  .bey-gauge em { position: absolute; left: 0; right: 0; top: 0; height: 6%; border-bottom: 2px solid #fff; background: rgba(255, 210, 63, 0.25); }
+  .bey-gauge.hot b { box-shadow: 0 0 0 2px #ffd23f, 0 0 24px rgba(255, 210, 63, 0.7); }
+  .bey-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+  /* what to do right now, over your top */
+  .bey-prompt { position: absolute; transform: translate(-50%, -100%) skewX(-8deg); pointer-events: none; text-align: center; opacity: 0;
+    transition: opacity .2s; font: 800 clamp(22px, 3vw, 34px)/1.05 var(--caps); text-transform: uppercase; letter-spacing: .03em; color: #fff;
+    background: rgba(0, 0, 0, 0.72); box-shadow: var(--rim); padding: 10px 18px 9px; white-space: nowrap; }
+  .bey-prompt small { display: block; font: 600 13px var(--body); letter-spacing: .06em; color: #bbb; margin-top: 4px; }
+  .bey-prompt.on { opacity: 1; }
+  .bey-prompt.wait { animation: beybreathe 1.2s ease-in-out infinite; }
+  .bey-prompt.hold { color: #ffd23f; }
+  .bey-prompt.rip { color: #7dff9a; }
+  .bey-prompt.pop { animation: beypop2 .35s cubic-bezier(.2, .8, .2, 1); }
+  .bey-prompt.wait.pop { animation: beypop2 .35s cubic-bezier(.2, .8, .2, 1), beybreathe 1.2s ease-in-out .35s infinite; }
+  @keyframes beybreathe { 50% { transform: translate(-50%, -100%) skewX(-8deg) scale(1.06); } }
+  @keyframes beypop2 { from { transform: translate(-50%, -100%) skewX(-8deg) scale(1.3); opacity: 0; } }
+  /* how to play */
+  .bey-tut { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.6); z-index: 2; }
+  .bey-tut.on { display: flex; }
+  .bey-tut-card { width: min(520px, calc(100vw - 32px)); background: rgba(8, 8, 8, 0.94); box-shadow: var(--rim); padding: 22px 26px 22px; text-align: center; }
+  .bey-tut-art { height: 150px; display: flex; align-items: center; justify-content: center; gap: 22px; margin-bottom: 10px; }
+  .bey-tut-step { font: 700 12px var(--caps); letter-spacing: .14em; text-transform: uppercase; color: #888; }
+  .bey-tut-title { font: 800 34px/1.1 var(--caps); text-transform: uppercase; color: #fff; margin: 2px 0 8px; }
+  .bey-tut-text { font: 500 16px/1.45 var(--body); color: #ddd; margin-bottom: 18px; }
+  .bey-tut-text b { color: #ffd23f; font-weight: 700; }
+  .art-gauge { position: relative; width: 30px; height: 130px; background: rgba(255, 255, 255, 0.08); box-shadow: var(--rim); overflow: hidden; }
+  .art-gauge i { position: absolute; inset: 0; transform-origin: bottom; background: linear-gradient(to top, #2f62b8, #ff4a3a 70%, #ffd23f); animation: artgauge 0.65s ease-in-out infinite alternate; }
+  .art-gauge em { position: absolute; left: 0; right: 0; top: 0; height: 7%; border-bottom: 2px solid #fff; background: rgba(255, 210, 63, 0.3); }
+  @keyframes artgauge { from { transform: scaleY(0.04); } to { transform: scaleY(1); } }
+  .art-hand { font: 800 22px var(--caps); text-transform: uppercase; color: #fff; padding: 8px 14px; box-shadow: var(--rim); animation: beyhold 2.3s ease-in-out infinite; }
+  @keyframes beyhold { 0%, 100% { background: #fff; color: #000; } 49% { background: #fff; color: #000; } 50%, 99% { background: transparent; color: #fff; } }
+  .art-rip { position: relative; width: 150px; height: 150px; }
+  .art-rip b { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border: 3px solid #fff; border-radius: 50%; }
+  .art-rip i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border: 4px solid #ffd23f; border-radius: 50%; animation: artring 1.6s linear infinite; }
+  .art-rip span { position: absolute; left: 0; right: 0; bottom: -2px; font: 800 18px var(--caps); text-transform: uppercase; color: #7dff9a; opacity: 0; animation: artrip 1.6s linear infinite; }
+  @keyframes artring { 0% { transform: scale(3.4); border-color: #ffd23f; } 72% { border-color: #ffd23f; } 75% { transform: scale(1); border-color: #7dff9a; } 80% { transform: scale(1); opacity: 1; } 90%, 100% { transform: scale(1); opacity: 0; } }
+  @keyframes artrip { 0%, 73% { opacity: 0; } 76%, 92% { opacity: 1; } 100% { opacity: 0; } }
+  .art-win { display: flex; align-items: center; gap: 14px; font: 800 28px var(--caps); text-transform: uppercase; color: #fff; }
+  .art-win span { padding: 8px 14px; box-shadow: var(--rim); transform: skewX(-10deg); }
+  .art-win span:first-child { background: #fff; color: #000; }
+  .art-win em { font: 600 15px var(--body); color: #888; font-style: normal; }
+  /* phones on their side: a slimmer card, so the stadium keeps most of the screen */
+  @media (max-height: 520px) {
+    #bey .inspect-card { bottom: max(10px, env(safe-area-inset-bottom)); }
+    #bey .inspect-title { font-size: 22px; }
+    #bey .inspect-hint { font-size: 11px; margin: 3px 0 8px; }
+    #bey .bey-tops { margin-bottom: 8px; gap: 6px; }
+    #bey .bey-tops button img { width: 60px; height: 60px; }
+    #bey .inspect-actions button { font-size: 14px; padding: 7px 18px; }
+    .bey-meter span img { width: 28px; height: 28px; }
+    .bey-tut-art { height: 96px; transform: scale(0.7); margin-bottom: 0; }
+    .bey-tut-card { padding: 12px 18px 14px; }
+    .bey-tut-title { font-size: 24px; margin-bottom: 4px; }
+    .bey-tut-text { font-size: 13px; margin-bottom: 10px; }
+  }
 </style>
 <script type="importmap">
 { "imports": {

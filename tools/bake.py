@@ -71,6 +71,7 @@ CLUSTERS = {
     'Art':       ('Art_', 'Clock_'),           # posters and photos on the wall; the web camera frames them
     'Fan_Blades': ('Fan_Blades',),    # spun in the browser, about its own origin
     'Fan_Head':  ('Fan_Head',),       # turned side to side in the browser, about the swivel
+    'Stadium':   ('Stadium_',),       # the Beyblade stadium under the desk: tapped to play
 }
 FAR_PREFIX = ('Bed_', 'Pillow', 'Wardrobe', 'Loft', 'Curtain', 'Plant', 'Swing', 'Ceiling_Fan')
 SHELL_PREFIX = ('Wall_', 'Floor', 'Ceiling', 'Balcony_')
