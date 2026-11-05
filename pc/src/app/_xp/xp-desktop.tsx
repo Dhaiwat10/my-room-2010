@@ -20,6 +20,16 @@ const NEXT: Partial<Record<Phase, Phase>> = { bios: "boot", boot: "welcome", wel
 
 // A 17" CRT ran 640×480 or 800×600; the smaller one keeps the UI readable
 // when the screen is scaled down to fit a browser window.
+// whether the visitor has clicked or typed on the page yet: the room's page, which holds this one
+function hasBeenTouched() {
+  try {
+    const act = (window.top ?? window).navigator.userActivation as { hasBeenActive: boolean } | undefined;
+    return act ? act.hasBeenActive : true;
+  } catch {
+    return true;
+  }
+}
+
 export const XP_WIDTH = 640;
 export const XP_HEIGHT = 480;
 
@@ -43,15 +53,22 @@ export function XpDesktop({ mode, autoBoot = true, powerRef, onPhase }: XpDeskto
     onPhase?.(phase);
   }, [phase, onPhase]);
 
-  // XP's startup sound plays at logon. Browsers refuse audio before the
-  // visitor has clicked or typed on the page, so an auto-boot may stay silent.
+  // XP's startup sound plays at logon. Browsers hold sound back until the
+  // visitor has clicked or typed on the page, and then let it out late, on
+  // that first tap, out of step with the boot. So it only plays if they
+  // already have: an auto-boot they haven't touched yet stays silent.
   const startupSound = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     if (phase === "bios") {
       startupSound.current = new Audio("/pc/xp/sounds/startup.mp3");
       startupSound.current.preload = "auto";
     }
-    if (phase === "welcome") void startupSound.current?.play().catch(() => {});
+    if (phase === "welcome" && hasBeenTouched()) {
+      const s = startupSound.current;
+      void s?.play().catch(() => {});
+      // and if it still couldn't start, drop it rather than let it play late
+      setTimeout(() => { if (s && s.currentTime === 0) s.pause(); }, 1500);
+    }
     if (phase === "off") startupSound.current?.pause();
   }, [phase]);
 
