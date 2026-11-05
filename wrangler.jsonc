@@ -7,6 +7,12 @@
   // home.dhaiwat.com moved here from the old home-dhaiwat worker.
   "workers_dev": true,
   "routes": [{ "pattern": "home.dhaiwat.com", "custom_domain": true }],
+  // Builds the XP machine into web/pc before every deploy or upload, here and in Workers
+  // Builds (web/pc isn't in git: without this CI would ship the room with no PC).
+  "build": { "command": "cd pc && (command -v bun >/dev/null || npm install -g bun) && bun install --frozen-lockfile && bun run build" },
+  // Workers Builds deploys non-production branches with `wrangler preview`, which needs this
+  // block (empty: everything else is shared with production)
+  "previews": {},
   "assets": {
     "directory": "./web",
     "html_handling": "auto-trailing-slash"
