@@ -11,7 +11,7 @@ let defs = document.createElementNS(NS, 'defs'); s.appendChild(defs);
 const mask = document.createElementNS(NS, 'mask'); mask.id = 'm'; defs.appendChild(mask);
 const mr = document.createElementNS(NS, 'rect'); mr.setAttribute('x', -1); mr.setAttribute('y', -1); mr.setAttribute('width', 2); mr.setAttribute('height', 2); mr.setAttribute('fill', '#fff'); mask.appendChild(mr);
 const blades = document.createElementNS(NS, 'g'); blades.setAttribute('mask', 'url(#m)'); s.appendChild(blades);
-const words = ['SUPER', 'VORTEX', 'STADIUM', ''];
+const words = ['', '', '', ''];   // no words on it: the swirl alone
 for (let i = 0; i < 4; i++) {
   const a0 = i * Math.PI / 2;
   const N = 60, outer = [], inner = [];

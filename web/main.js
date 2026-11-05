@@ -661,7 +661,7 @@ const actions = {
   G_boxes: ['games', 'PC games'],
   Fan_Head: ['fan', 'Havells pedestal fan'],
   Fan_Blades: ['fan', 'Havells pedestal fan'],
-  Stadium: ['bey', 'Beyblade stadium'],
+  Stadium: ['bey', 'Click to play'],
 };
 const KNOB_VOL = 'Speaker_L_Knob_Volume', KNOB_PWR = 'Speaker_L_Knob_Power';
 const isKnob = (n) => n === KNOB_VOL || n === KNOB_PWR;
@@ -981,7 +981,7 @@ function updateShelf() {
     `<button data-disc="${id}"><img src="assets/disc_${id}.jpg" alt=""><span>${d.label}</span></button>`).join('');
 }
 const inspector = createInspector();
-const bey = createBeyGame({ audio });
+const bey = createBeyGame({ audio, onClose: () => { if (mode === 'stadium') stadiumOut(); } });
 window.__bey = bey;   // for opening it from the console
 if (new URLSearchParams(location.search).has('bey')) bey.open();   // ?bey: straight into a battle, for playtesting
 const discName = (id) => DISCS[id]?.label ?? 'Disc';
@@ -1192,7 +1192,7 @@ function driveOut() {
 }
 
 // ------------------------------------------------------------------ pointer
-let mode = 'seated';   // seated | moving | zoomed | knobs | drive | fan
+let mode = 'seated';   // seated | moving | zoomed | knobs | drive | fan | stadium
 const el = renderer.domElement;
 const reachable = (name) => name && (mode === 'seated' ? name in actions
   : mode === 'drive' ? ['Drive', 'PC_Disc', 'PC_Drive_Bed', 'Tower'].includes(name)
@@ -1259,7 +1259,7 @@ el.addEventListener('click', (e) => {
   else if (act === 'drive' && drive) driveIn();
   else if (act === 'games') { audio.knobClick(0.25); openGames(boxAt(lastHit) ?? 'cricket07'); }
   else if (act === 'fan') fanIn();
-  else if (act === 'bey') { $('tip').style.display = 'none'; hovered = null; audio.knobClick(0.25); bey.open(); }
+  else if (act === 'bey') { audio.knobClick(0.25); stadiumIn(); }
 });
 
 // ------------------------------------------------------------------ moving the camera
@@ -1368,6 +1368,25 @@ function fanOut() {
   setHud('');
   $('back').style.display = 'none';
   moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); }, 1.2);
+}
+// down to the stadium under the desk: leaning over it from in front, the bowl filling the view,
+// then the game opens over it; closing the game comes back up to the seat
+function stadiumPose() {
+  const box = new THREE.Box3().setFromObject(named.Stadium);
+  const target = box.getCenter(new THREE.Vector3()); target.y = box.max.y - 0.01;
+  const out = seatPos.clone().sub(target).setY(0).normalize();
+  const eye = target.clone().addScaledVector(out, 0.2).add(new THREE.Vector3(0, 0.26, 0));
+  const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(eye, target, new THREE.Vector3(0, 1, 0)));
+  return [eye, q];
+}
+function stadiumIn() {
+  $('tip').style.display = 'none'; hovered = null;
+  setHud('');
+  const [p, q] = stadiumPose();
+  moveTo(p, q, () => { mode = 'stadium'; bey.open(); }, 1.1);
+}
+function stadiumOut() {
+  moveTo(seatPos, seatQuat, () => { mode = 'seated'; setHud(SEATED_HUD); }, 1.1);
 }
 $('back').addEventListener('click', () => (mode === 'knobs' ? knobsOut() : mode === 'drive' ? driveOut() : mode === 'fan' ? fanOut() : zoomOut()));
 
@@ -1694,6 +1713,7 @@ const post = !usePost ? null : (() => {
     if (mode === 'knobs' && knobs[KNOB_VOL]) return knobs[KNOB_VOL].mesh.getWorldPosition(at);
     if (mode === 'drive' && drive) return at.copy(drive.faceCentre);
     if (mode === 'fan' && fanKeys[2]) return fanKeys[2].mesh.getWorldPosition(at);
+    if (mode === 'stadium' && named.Stadium) return new THREE.Box3().setFromObject(named.Stadium).getCenter(at);
     return null;
   }
   return {
