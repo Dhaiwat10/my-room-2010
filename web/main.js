@@ -1762,6 +1762,7 @@ window.__bench = (n = 40) => {
 };
 
 const clock = new THREE.Clock();
+let beyCover = 0;
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   time.value = clock.elapsedTime;
@@ -1792,6 +1793,8 @@ renderer.setAnimationLoop(() => {
   updateDial();
   dust.update(clock.elapsedTime);
   boxRig?.update(dt, clock.elapsedTime);
+  // the game covers the whole screen once it has faded in: don't draw the room under it
+  if (bey.isOpen) { beyCover += dt; if (beyCover > 0.5) return; } else beyCover = 0;
   if (post) post.render(dt); else renderer.render(scene, camera);
   cssRenderer.render(cssScene, camera);
 });

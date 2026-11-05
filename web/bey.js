@@ -100,7 +100,10 @@ const BODY = (() => {
 const TIP_PULL = 0.3;
 const W_RISE = 160, SINK = 0.9;         // the tip stands it up above W_RISE; under it, it sinks at up to SINK per second
 const W_STOP = 16;                       // spinning slower than this, lying on its edge, it's over
-const SHUTTER = 1 / 110, GHOSTS = 7;     // motion blur, as on the fan: copies smeared across the shutter's sweep
+// phones and tablets: a lighter build of the same scene (fewer smear copies, no refraction pass,
+// smaller shadows, a resolution that drops if frames run long)
+const LITE = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('lite');   // (?lite: to try it on a desktop)
+const SHUTTER = 1 / 110, GHOSTS = LITE ? 4 : 7;   // motion blur, as on the fan: copies smeared across the shutter's sweep
 const BEAT = 0.8;                        // seconds between "3", "2", "1" and "Let it rip!"
 const GAUGE_PERIOD = 1.3;                // the power gauge swings up and back in this long
 // how a launch is graded: the gauge's height when you let go, and how far off "rip" your tap was
@@ -220,6 +223,10 @@ function topMaterial(src, T) {
     });
     if (!src.map) m.color.copy(src.color);
     else if (!n.endsWith('_track')) m.color.copy(tint).lerp(new THREE.Color(0xffffff), 0.45);   // tinted all through, as dyed plastic is
+    if (LITE) {                                 // refraction re-renders the whole scene every frame: see-through tinted plastic instead
+      m.transmission = 0; m.transparent = true; m.opacity = n.endsWith('_track') ? 0.9 : 0.8;
+      if (src.map && !n.endsWith('_track')) m.color.copy(tint).lerp(new THREE.Color(0xffffff), 0.3);
+    }
   } else {                                     // the tip: solid moulded plastic
     m = new THREE.MeshPhysicalMaterial({ map: src.map, color: src.map ? 0xffffff : src.color, roughness: 0.38, clearcoat: 0.4, envMapIntensity: TOP_ENV.plastic });
   }
@@ -232,7 +239,7 @@ function assemble(parts) {
   for (const [g, m] of parts) { const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; solid.add(mesh); }
   const ghosts = [];
   for (let i = 0; i < GHOSTS; i++) {
-    const f = i / (GHOSTS - 1), a = 0.55 * Math.sin(Math.PI * (0.15 + 0.7 * f));
+    const f = i / (GHOSTS - 1), a = Math.min(0.85, 0.55 * 7 / GHOSTS) * Math.sin(Math.PI * (0.15 + 0.7 * f));
     const g = new THREE.Group();
     for (const [geo, m] of parts) {
       const mm = (Array.isArray(m) ? m : [m]).map((x) => { const c = x.clone(); c.transparent = true; c.opacity = a * (x.opacity ?? 1); c.depthWrite = false; return c; });
@@ -515,11 +522,11 @@ export function createBeyGame({ audio, onClose } = {}) {
 
   // -------------------------------------------------- scene
   function build() {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });   // (the composer draws into its own buffer: the canvas's antialiasing went unused)
+    renderer.setPixelRatio(maxRatio());
     renderer.toneMapping = THREE.ACESFilmicToneMapping;   // as the inspect view; keeps the red deep where AgX turns it salmon
     renderer.toneMappingExposure = 1.0;
-    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = LITE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x070605);
     scene.fog = new THREE.Fog(0x070605, 0.9, 2.6);
@@ -528,7 +535,7 @@ export function createBeyGame({ audio, onClose } = {}) {
     // the desk lamp, up front and to the left, for the shadows in the bowl and a highlight on the rim
     const key = new THREE.SpotLight(0xffe2bf, 4.5, 2.5, 0.6, 0.75, 1.4);
     key.position.set(-0.28, 0.72, 0.42); key.castShadow = true;
-    key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0003; key.shadow.normalBias = 0.0015;
+    key.shadow.mapSize.setScalar(LITE ? 1024 : 2048); key.shadow.bias = -0.0003; key.shadow.normalBias = 0.0015;
     key.shadow.camera.near = 0.3; key.shadow.camera.far = 1.6;
     scene.add(key, key.target);
     // a cool rim from behind, so the tops' edges catch light against the dark
@@ -632,9 +639,21 @@ export function createBeyGame({ audio, onClose } = {}) {
     scene.add(stadium);
   }
 
+  // the resolution: the screen's, up to 2x (1.5x on phones), stepped down while frames run long
+  function maxRatio() { return Math.min(devicePixelRatio, LITE ? 1.5 : 2); }
+  let ratio = maxRatio(), slowT = 0, frames = 0, spanT = 0, governing = false;   // (not while loading: compiling shaders stalls frames)
+  function govern(realDt) {
+    if (!governing) return;
+    frames++; spanT += realDt;
+    if (spanT < 1) return;
+    const ms = spanT / frames * 1000; frames = 0; spanT = 0;
+    if (ms > 24 && ratio > 1) { slowT++; if (slowT >= 2) { ratio = Math.max(1, ratio - 0.25); slowT = 0; resize(); } }
+    else slowT = 0;
+  }
   function resize() {
     if (!renderer) return;
     const w = innerWidth, h = innerHeight;
+    renderer.setPixelRatio(ratio); composer.setPixelRatio(ratio);
     renderer.setSize(w, h, false); composer.setSize(w, h);
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }
@@ -1445,6 +1464,7 @@ export function createBeyGame({ audio, onClose } = {}) {
     updateSparks(dt); updateFlashes(realDt);
     direct(dt, realDt);
     composer.render(realDt);
+    govern(realDt);
   }
 
   // -------------------------------------------------- open, close
@@ -1464,12 +1484,13 @@ export function createBeyGame({ audio, onClose } = {}) {
     if (!ready) ready = load();
     await ready;
     if (!open) return;
+    frames = 0; spanT = 0; slowT = 0; governing = true;
     pick();
     if (!seenGuide()) guide();                 // the first time: how to play, before anything else
   }
   function close() {
     if (!open) return;
-    open = false; phase = 'idle'; launchState = null;
+    open = false; phase = 'idle'; launchState = null; governing = false;
     timers.forEach(clearTimeout); timers.length = 0;
     root.classList.remove('on');
     document.body.classList.remove('bey-open');
@@ -1501,5 +1522,21 @@ export function createBeyGame({ audio, onClose } = {}) {
     const lost = end.startsWith('you') ? 1 : 0;
     return { end: end || 'time', t: +t.toFixed(1), hits, wobble: wob[lost] === null ? null : +(t - wob[lost]).toFixed(2), maxLean: +Math.max(...maxLean).toFixed(3) };
   }
-  return { open: show, close, get isOpen() { return open; }, simulate, TOPS };
+  // for checking from the console: average ms per frame as it stands, each frame waited on (readPixels)
+  function bench(n = 30, blur = false, at = 0) {   // blur: as mid-battle, both tops drawn as their smeared copies; at: at this resolution
+    const gl = renderer.getContext(), px = new Uint8Array(4);
+    const tops = blur ? [you, cpu].filter((P) => P?.m) : [], was = tops.map((P) => P.m.solid.visible);
+    for (const P of tops) { P.m.solid.visible = false; P.m.ghosts.forEach((g) => (g.visible = true)); }
+    const keep = ratio; if (at) { ratio = at; resize(); }
+    const draw = () => { composer.render(1 / 60); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); };
+    for (let i = 0; i < 3; i++) draw();
+    const t0 = performance.now();
+    for (let i = 0; i < n; i++) draw();
+    const ms = +((performance.now() - t0) / n).toFixed(2);
+    renderer.info.autoReset = false; renderer.info.reset(); draw(); renderer.info.autoReset = true;
+    tops.forEach((P, i) => { P.m.solid.visible = was[i]; P.m.ghosts.forEach((g) => (g.visible = !was[i])); });
+    if (at) { ratio = keep; resize(); }
+    return { ms, ratio: at || ratio, lite: LITE, phase, calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
+  }
+  return { open: show, close, get isOpen() { return open; }, simulate, bench, TOPS };
 }
