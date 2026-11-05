@@ -1,4 +1,4 @@
-"""Textures for the Super Vortex stadium, drawn with numpy and saved as PNGs beside this file.
+"""Textures for the stadium, drawn with numpy and saved as PNGs beside this file.
 
 Run inside Blender (it saves through bpy):  exec(open('art/stadium/textures.py').read())
 

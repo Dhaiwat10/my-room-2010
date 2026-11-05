@@ -464,11 +464,11 @@ class Trail {
 }
 
 // ------------------------------------------------------------------ the overlay
-export function createBeyGame({ audio } = {}) {
+export function createBeyGame({ audio, onClose } = {}) {
   const root = document.createElement('div');
   root.id = 'bey';
   root.setAttribute('role', 'dialog');
-  root.setAttribute('aria-label', 'Beyblade battle');
+  root.setAttribute('aria-label', 'Game');
   root.innerHTML = `<canvas aria-hidden="true"></canvas>
     <svg class="bey-cord" aria-hidden="true">
       <circle class="bey-target" r="26" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="3"/>
@@ -1454,7 +1454,7 @@ export function createBeyGame({ audio } = {}) {
     if (!renderer) build();
     root.classList.add('on');
     document.body.classList.add('bey-open');      // the room's speaker button stays on top, to unmute from here
-    card('Super Vortex stadium', 'Loading…'); topsEl.innerHTML = ''; setActions([{ label: 'Close', run: close }]);
+    card('', 'Loading…'); topsEl.innerHTML = ''; setActions([{ label: 'Close', run: close }]);
     resize();
     setShot('wide', 1.5);
     renderer.setAnimationLoop(frame);
@@ -1476,6 +1476,7 @@ export function createBeyGame({ audio } = {}) {
     clearTops(); setCall(''); hideLaunchUI(); meters.classList.remove('on');
     sound?.close(); sound = null;
     setTimeout(() => { if (!open) renderer.setAnimationLoop(null); }, 400);
+    onClose?.();
   }
 
   // for tuning: play a whole match instantly, unseen ({ you, cpu: top indices, power, rip })

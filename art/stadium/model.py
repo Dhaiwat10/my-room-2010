@@ -1,4 +1,4 @@
-"""The Super Vortex stadium's body: one moulded red plastic shell, scaled down to sit on the desk.
+"""The stadium's body: one moulded red plastic shell, scaled down to sit on the desk.
 
 Run inside Blender:  exec(open('art/stadium/model.py').read())
 Rebuilds the object 'Stadium_Body' (keeping its material) from a cross-section spun round the
