@@ -759,6 +759,13 @@ bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, 'room.glb'), export_format=
                           use_selection=True, export_materials='NONE', export_cameras=True,
                           export_apply=True, export_yup=True, export_texcoords=True,
                           export_normals=False)
+# compress it for the web, and simplify the stadium (tools/pack.mjs; needs `bun install` in tools/)
+import shutil, subprocess
+TOOLS = os.path.dirname(os.path.abspath(__file__))
+if shutil.which('bun') and os.path.isdir(os.path.join(TOOLS, 'node_modules')):
+    subprocess.run(['bun', os.path.join(TOOLS, 'pack.mjs'), os.path.join(OUT, 'room.glb')], check=True)
+else:
+    print('pack: skipped, room.glb stays uncompressed (cd tools && bun install)', flush=True)
 with open(os.path.join(OUT, 'manifest.json'), 'w') as f:
     json.dump(manifest, f, indent=1)
 # the joined, unwrapped scene, for inspecting a bake (kept out of web/, which gets served)
@@ -766,6 +773,5 @@ DEBUG_BLEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'bu
 os.makedirs(os.path.dirname(DEBUG_BLEND), exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=DEBUG_BLEND, copy=True)
 # GPU-compressed copies of every atlas, which the browser prefers (needs basisu; skipped without)
-import subprocess
-subprocess.run(['python3', '-I', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ktx2.py'), OUT])
+subprocess.run(['python3', '-I', os.path.join(TOOLS, 'ktx2.py'), OUT])
 print('DONE', OUT)
