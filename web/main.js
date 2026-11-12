@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -57,8 +58,17 @@ const audio = new RoomAudio(camera);
 const manager = new THREE.LoadingManager();
 manager.onProgress = (_, done, total) => { $('bar').firstElementChild.style.width = `${(done / total) * 100}%`; };
 const texLoader = new THREE.TextureLoader(manager);
-const v = `?v=${Date.now()}`;
-const manifest = await (await fetch(`assets/manifest.json${v}`)).json();
+// index.html has already asked for the manifest, the model and the probe, while the scripts
+// were still arriving (window.__boot there); they're handed to the loaders from here
+const boot = window.__boot;
+const v = boot.v;
+const manifest = await boot.manifest;
+// one of those downloads, given to a three.js loader (through the manager, for the bar)
+const fromBoot = async (download, loader) => {
+  const url = URL.createObjectURL(await download);
+  try { return await loader.loadAsync(url); } finally { URL.revokeObjectURL(url); }
+};
+const roomLoad = fromBoot(boot.glb, new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder));   // meshopt: tools/pack.mjs
 // a touch under Blender's exposure: the room should sit in the dark, not glow
 const MOOD_EV = 0;   // exposure now set in Blender (manifest.exposure)
 renderer.toneMappingExposure = Math.pow(2, (manifest.exposure ?? 0) + MOOD_EV);
@@ -121,8 +131,21 @@ const pbr = !!manifest.probe && Object.values(manifest.groups).every((g) => g.nr
   && params.get('spec') !== '0';
 const spec = {};
 const pbrDefines = {};
+const probeLoad = pbr ? fromBoot(boot.probe, new EXRLoader(manager)) : null;
+// every atlas starts downloading now, rather than once the probe is in (the materials below need
+// its size for their defines, the textures don't)
+const maps = {};
+for (const [group, g] of Object.entries(manifest.groups)) {
+  maps[group] = {
+    albedo: tex(g, 'albedo'),
+    light: tex(g, 'light', !!logK),
+    emit: g.emit ? tex(g, 'emit', !!logK) : { value: black },
+    screen: g.screen ? tex(g, 'screen', !!logK) : { value: black },
+    ...(pbr ? { nrm: tex(g, 'nrm', true), surf: tex(g, 'surf', true), keys: tex(g, 'keys', true) } : {}),
+  };
+}
 if (pbr) {
-  const eq = await new EXRLoader(manager).loadAsync(`assets/${manifest.probe.file}${v}`);
+  const eq = await probeLoad;
   const pmrem = new THREE.PMREMGenerator(renderer);
   const env = pmrem.fromEquirectangular(eq).texture;
   pmrem.dispose(); eq.dispose();
@@ -157,17 +180,11 @@ for (const [group, g] of Object.entries(manifest.groups)) {
   materials[group] = new THREE.ShaderMaterial({
     defines: { ...(logK ? { LOG_LIGHT: 1 } : {}), ...(punchy ? { AGX_PUNCHY: 1 } : { AGX_MOOD: 1 }), ...pbrDefines },
     uniforms: {
-      albedo: tex(g, 'albedo'),
-      light: tex(g, 'light', !!logK),
-      emit: g.emit ? tex(g, 'emit', !!logK) : { value: black },
-      screen: g.screen ? tex(g, 'screen', !!logK) : { value: black },
+      ...maps[group],
       lightScale: { value: g.lightScale },
       emitScale: { value: g.emitScale ?? 0 },
       screenScale: { value: g.screenScale ?? 0 },
       ...(pbr ? {
-        nrm: tex(g, 'nrm', true),
-        surf: tex(g, 'surf', true),
-        keys: tex(g, 'keys', true),
         keysScale: { value: g.keysScale },
         ...spec,
       } : {}),
@@ -304,7 +321,7 @@ for (const [group, g] of Object.entries(manifest.groups)) {
       }`,
   });
 }
-const gltf = await new GLTFLoader(manager).loadAsync(`assets/room.glb${v}`);
+const gltf = await roomLoad;
 scene.add(gltf.scene);
 scene.updateMatrixWorld(true);
 

@@ -13,6 +13,8 @@ My desk from around 2010, rebuilt in the browser. **Live at [home.dhaiwat.com](h
 | `room.blend` | The scene. Lighting is authored here. |
 | `tools/bake.py` | Bakes light, normals, roughness/metalness, each key light and a reflection probe into atlases, and exports `web/assets/`. Runs in headless Blender. |
 | `tools/ktx2.py` | Encodes the atlases as GPU-compressed KTX2. Run by the bake; needs `basis_universal`. |
+| `tools/pack.mjs` | Meshopt-compresses `room.glb` and simplifies the stadium in it. Run by the bake; needs `bun install` in `tools/`. |
+| `tools/preloads.mjs` | Prints the module preload list in `web/index.html`. Rerun it after changing an import. |
 | `web/` | The site: `main.js` (room, camera, post), `audio.js` (3D speakers, fans), `bey.js` (the top battle), `inspect.js` (close-ups). |
 | `pc/` | The XP machine (React + Vite), built into `web/pc/`. |
 | `art/` | Posters, photos and textures used in the scene, and the models and scripts for the stadium, tops and launcher. |
@@ -27,6 +29,7 @@ python3 tools/serve.py                  # serve web/ locally (and on the LAN)
 Rebake the room (quick: 96 samples at half size; full: 512):
 
 ```bash
+cd tools && bun install && cd ..                # once: the model packer's dependencies
 /Applications/Blender.app/Contents/MacOS/Blender -b room.blend --python tools/bake.py -- web/assets 512
 ```
 
