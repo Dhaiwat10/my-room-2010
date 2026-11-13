@@ -328,5 +328,16 @@
 <div id="loader" aria-label="Loading"><div id="bar"><i></i></div></div>
 
 <script type="module" src="main.js"></script>
+<!-- Cloudflare Web Analytics (cookieless). Only on the live site, so local runs and
+     preview builds stay out of the numbers; only here, not in pc/, so a visit counts once. -->
+<script>
+  if (location.hostname === 'home.dhaiwat.com') {
+    const s = document.createElement('script');
+    s.defer = true;
+    s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    s.dataset.cfBeacon = '{"token": "3bd1dda292b54e5eb0f0c7386714791f"}';
+    document.body.appendChild(s);
+  }
+</script>
 </body>
 </html>
